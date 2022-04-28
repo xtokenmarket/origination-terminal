@@ -1,9 +1,1 @@
-{
-    "originationCore": "0x918FFf7b2e9AB9929D0A2eaD13f2b141d2CeE680",
-    "originationProxyAdmin": "0xB94AD1b2F340a677bfe3D1BcDc06fE313c11a305",
-    "originationPoolImpl": "0x7bD65Ccd7e24fe391d0A3e243086DEe81454CB6D",
-    "nonFungiblePoolImpl": "0x64121300dd9FdB0523b8Bb28E3793C7498F3A624",
-    "originationCoreImpl": "0xf2ca6dfDEDA6a34Ac3cbDdbDdCDAFe7f8f2e668c",
-    "xTokenManager": "0x4BecA1ccbd5dF4e1B4fe0aC17f0B1d08DA4C0eD0",
-    "poolDeployer": "0xC03F450400564044B1eF5C48f1FF9eA1bD9b7F43"
-}
+{"originationCore":"0x07e357E448eeFF56ae855ac0Bf204b53a673092f","originationProxyAdmin":"0xF2BfE66ABA8f4b33641831C37c5a0039c54382cb","originationPoolImpl":"0x85fD161Ef4671a1C4E302029dc8bB6503555244A","nonFungiblePoolImpl":"0x0B57C84707B802FCce90787b593b518B83a2De06","originationCoreImpl":"0x3c15a4dAC379B33ebafa8a75d6b96FCb8A7e5887","vestingEntryNFTImpl":"0x8B8F4C65FF41C5dDc0aEd3464fA8664831E6d1BA","xTokenManager":"0xF56c17e29C0d448F3b6e18C9b10CBd63c3a67BF0","poolDeployer":"0xe09698c91d8c54B5d77711982Bf13d968F592649","nftDeployer":"0x513aA033ea2E8Ad64653d08C511d6066F1f92E0f"}

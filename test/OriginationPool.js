@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const createFixture = require("./fixture");
 const { advanceTime } = require("./utils");
 const { BigNumber } = require("ethers");
+const { increaseTime, setBalance } = require("../scripts/helpers");
 
 describe("FungibleOriginationPool", async () => {
   let deployer, user, user1;
@@ -240,6 +241,69 @@ describe("FungibleOriginationPool", async () => {
 
       expect(offerBalanceAfter).to.equal(expectedAmountOut);
       expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter);
+    });
+
+    it("should refund sender if purchase amount exceeds total sale offering", async () => {
+      // disable whitelist
+      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
+
+      // initiate sale
+      await originationPool.initiateSale();
+
+      // offerToken = token out
+      // purchaseToken = token in
+      const offerBalanceBefore = await offerToken.balanceOf(user.address);
+      expect(offerBalanceBefore).to.equal(0);
+
+      const purchaseBalanceBefore = await purchaseToken.balanceOf(user.address);
+
+      await increaseTime(1);
+      // Get the purchase token amount required to buy all offered tokens
+      let purchaseTokenAmount = await originationPool.getPurchaseAmountFromOfferAmount(totalOfferingAmount);
+
+      // purchase exceeds sale ceiling by 10%
+      let bigPurchaseAmount = purchaseTokenAmount.add(purchaseTokenAmount.div(10));
+      await originationPool.connect(user).purchase(bigPurchaseAmount);
+
+      let refundAmount = purchaseTokenAmount.div(10);
+
+      const purchaseBalanceAfter = await purchaseToken.balanceOf(user.address);
+
+      let purchaseAmountSpent = purchaseBalanceBefore.sub(purchaseBalanceAfter);
+      expect(purchaseAmountSpent).to.be.eq(bigPurchaseAmount.sub(refundAmount));
+    });
+
+    it(`should refund sender if purchase amount exceeds total sale offering 
+              for pools with purchase decimals < offer decimals`, async () => {
+      // disable whitelist
+      await originationPoolDecimals.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
+
+      // initiate sale
+      await originationPoolDecimals.initiateSale();
+
+      // offerToken = token out
+      // purchaseToken = token in
+      const offerBalanceBefore = await offerToken.balanceOf(user.address);
+      expect(offerBalanceBefore).to.equal(0);
+
+      const purchaseBalanceBefore = await purchaseTokenDecimalsLower.balanceOf(user.address);
+
+      await increaseTime(1);
+      // Get the purchase token amount required to buy all offered tokens
+      let purchaseTokenAmount = await originationPoolDecimals.getPurchaseAmountFromOfferAmount(totalOfferingAmount);
+
+      // purchase exceeds sale ceiling by 10%
+      let bigPurchaseAmount = purchaseTokenAmount.add(purchaseTokenAmount.div(10));
+      await originationPoolDecimals.connect(user).purchase(bigPurchaseAmount);
+
+      let refundAmount = purchaseTokenAmount.div(10);
+
+      const purchaseBalanceAfter = await purchaseTokenDecimalsLower.balanceOf(user.address);
+
+      let purchaseAmountSpent = purchaseBalanceBefore.sub(purchaseBalanceAfter);
+      expect(purchaseAmountSpent).to.be.eq(bigPurchaseAmount.sub(refundAmount));
     });
   });
 
@@ -506,6 +570,34 @@ describe("FungibleOriginationPool", async () => {
       const offerBalanceAfter = await offerToken.balanceOf(user.address);
 
       expect(offerBalanceAfter).to.equal(expectedAmountOut);
+    });
+
+    it("should refund sender if purchase amount exceeds total sale offering", async () => {
+      // disable whitelist
+      await originationPoolETH.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
+
+      // initiate sale
+      await originationPoolETH.initiateSale();
+
+      // offerToken = token out
+      // purchaseToken = token in
+      const offerBalanceBefore = await offerToken.balanceOf(user.address);
+      expect(offerBalanceBefore).to.equal(0);
+
+      const purchaseBalanceBefore = await purchaseToken.balanceOf(user.address);
+
+      await increaseTime(1);
+      // Get the purchase token amount required to buy all offered tokens
+      let purchaseTokenAmount = await originationPoolETH.getPurchaseAmountFromOfferAmount(totalOfferingAmount);
+
+      // purchase exceeds sale ceiling by 10%
+      let bigPurchaseAmount = purchaseTokenAmount.add(purchaseTokenAmount.div(10));
+      let refundAmount = purchaseTokenAmount.div(10);
+      let expectedEthSent = "-" + bigPurchaseAmount.sub(refundAmount).toString();
+      await setBalance(user.address, bigPurchaseAmount.add(bigPurchaseAmount.div(10)));
+      await expect(await originationPoolETH.connect(user).purchase(bigPurchaseAmount, { value: bigPurchaseAmount })).
+        to.changeEtherBalance(user, expectedEthSent)
     });
   });
 

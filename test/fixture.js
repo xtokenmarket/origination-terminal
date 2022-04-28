@@ -24,10 +24,10 @@ const createFixture = deployments.createFixture(async () => {
   const purchaseCap = ethers.utils.parseUnits("2000.0", 10);
 
   // token transfers
-  await purchaseToken.transfer(user.address, ethers.utils.parseEther("10000"));
-  await purchaseTokenDecimalsLower.transfer(user.address, ethers.utils.parseUnits("10000", 6));
-  await purchaseToken.transfer(user1.address, ethers.utils.parseEther("10000"));
-  await purchaseTokenDecimalsLower.transfer(user1.address, ethers.utils.parseUnits("10000", 6));
+  await purchaseToken.transfer(user.address, ethers.utils.parseEther("1000000"));
+  await purchaseTokenDecimalsLower.transfer(user.address, ethers.utils.parseUnits("1000000", 6));
+  await purchaseToken.transfer(user1.address, ethers.utils.parseEther("1000000"));
+  await purchaseTokenDecimalsLower.transfer(user1.address, ethers.utils.parseUnits("1000000", 6));
 
   // deploy fungible origination pool implementation
   const originationPoolImpl = await deploy('FungibleOriginationPool')

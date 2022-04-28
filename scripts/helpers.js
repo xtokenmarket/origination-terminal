@@ -74,5 +74,40 @@ async function verifyContractWithArgsAndName(address, contractName, ...args) {
     }
 }
 
+
+/**
+ * Increase time in Hardhat Network
+ */
+ async function increaseTime(time) {
+    await network.provider.send("evm_increaseTime", [time]);
+    await network.provider.send("evm_mine");
+}
+
+
+
+/**
+ * Mine several blocks in network
+ * @param {Number} blockCount how many blocks to mine
+ */
+ async function mineBlocks(blockCount) {
+    for(let i = 0 ; i < blockCount ; ++i) {
+        await network.provider.send("evm_mine");
+    }
+}
+
+/**
+ * Set an address ETH balance to an amount
+ * @param {*} address 
+ */
+ async function setBalance(address, amount) {
+    await network.provider.send("hardhat_setBalance", [
+      address,
+      amount.toHexString(),
+    ]);
+  }
+
+
 module.exports = { deploy, deployArgs, deployWithAbi, deployAndLink,
-                    verifyContractNoArgs, verifyContractWithArgs, verifyContractWithArgsAndName}
+                    verifyContractNoArgs, verifyContractWithArgs, verifyContractWithArgsAndName,
+                    increaseTime, mineBlocks, setBalance
+                }

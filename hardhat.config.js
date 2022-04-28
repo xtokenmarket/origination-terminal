@@ -4,7 +4,7 @@ require('@nomiclabs/hardhat-etherscan');
 require("hardhat-deploy");
 require("hardhat-deploy-ethers");
 require("@openzeppelin/hardhat-upgrades");
-require('hardhat-contract-sizer');
+// require('hardhat-contract-sizer');
 require("solidity-coverage");
 
 require('dotenv').config();
@@ -77,6 +77,6 @@ module.exports = {
   },
   contractSizer: {
     alphaSort: true,
-    runOnCompile: true,
+    runOnCompile: false,
   }
 }

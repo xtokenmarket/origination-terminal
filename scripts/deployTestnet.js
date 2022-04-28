@@ -14,6 +14,8 @@ async function deployTestnet() {
     const nonFungibleOriginationPoolImpl = await deploy('NonFungibleOriginationPool');
     await nonFungibleOriginationPoolImpl.deployed();
     console.log('deployed origination pool implementations')
+    // deploy vestingEntryNFT
+    const vestingEntryNFT = await deploy('VestingEntryNFT');
 
     const xTokenManager = await deploy('MockxTokenManager');
     await xTokenManager.deployed();
@@ -25,6 +27,8 @@ async function deployTestnet() {
     const poolDeployer = await deployArgs('PoolDeployer', originationPoolImpl.address, nonFungibleOriginationPoolImpl.address);
     await poolDeployer.deployed();
     console.log('deployed pool deployer');
+    // deploy nft deployer
+    const nftDeployer = await deployArgs('NFTDeployer', vestingEntryNFT.address);
 
     // deploy origination core
     const listingFee = ethers.utils.parseEther("0.01"); // 1 %
@@ -37,7 +41,8 @@ async function deployTestnet() {
     await originationCoreProxy.deployed();
     console.log('deployed origination core proxy');
     const originationCore = await ethers.getContractAt('OriginationCore', originationCoreProxy.address);
-    await (await originationCore.initialize(listingFee, originationFee, xTokenManager.address, poolDeployer.address)).wait();
+    await (await originationCore.initialize(listingFee, originationFee, xTokenManager.address, 
+            poolDeployer.address, nftDeployer.address)).wait();
 
     let originationProxyAdmin = await originationCore.proxyAdmin();
 
@@ -47,8 +52,10 @@ async function deployTestnet() {
         originationPoolImpl: originationPoolImpl.address,
         nonFungiblePoolImpl: nonFungibleOriginationPoolImpl.address,
         originationCoreImpl: originationCoreImpl.address,
+        vestingEntryNFTImpl: vestingEntryNFT.address,
         xTokenManager: xTokenManager.address,
         poolDeployer: poolDeployer.address,
+        nftDeployer: nftDeployer.address
     }
 
     fs.writeFileSync('./scripts/deployment_kovan.json', JSON.stringify(deployment));

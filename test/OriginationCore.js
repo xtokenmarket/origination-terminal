@@ -47,7 +47,7 @@ describe("OriginationCore", async () => {
     expect(upgradeResult).to.equal(10);
   });
 
-  it("should successfully claim fees as revenu controller", async () => {
+  it("should successfully claim fees as revenue controller", async () => {
     // purchase tokens
     // disable whitelist
     await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);

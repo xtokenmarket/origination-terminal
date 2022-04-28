@@ -113,13 +113,7 @@ contract FungibleOriginationPool is
     event Purchase(address indexed purchaser, uint256 contributionAmount, uint256 offerAmount, uint256 purchaseFee);
     event CreateVestingEntry(
         address indexed purchaser,
-        uint256 vestingId,
-        uint256 saleEndTimestamp,
-        uint256 offerTokenAmount
-    );
-    event ModifyVestingEntry(
-        address indexed purchaser,
-        uint256 vestingId,
+        uint256 vestingId, 
         uint256 saleEndTimestamp,
         uint256 offerTokenAmount
     );
@@ -196,52 +190,64 @@ contract FungibleOriginationPool is
      * @dev Purchases the offer token with a contribution amount of purchase tokens
      * @dev If purchasing with ETH, contribution amount must equal ETH sent
      *
-     * @param _merkleProof The merkle proof associated with msg.sender to prove whitelisted
-     * @param _contributionAmount The contribution amount in purchase tokens
+     * @param merkleProof The merkle proof associated with msg.sender to prove whitelisted
+     * @param contributionAmount The contribution amount in purchase tokens
      */
-    function whitelistPurchase(bytes32[] calldata _merkleProof, uint256 _contributionAmount) external payable {
+    function whitelistPurchase(bytes32[] calldata merkleProof, uint256 contributionAmount) external payable {
         require(whitelist.enabled, "Whitelist not enabled");
         require(isWhitelistMintPeriod(), "Not whitelist period");
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        require(MerkleProof.verify(_merkleProof, whitelist.whitelistMerkleRoot, leaf), "Address not whitelisted");
+        require(MerkleProof.verify(merkleProof, whitelist.whitelistMerkleRoot, leaf), "Address not whitelisted");
 
-        _purchase(_contributionAmount);
+        _purchase(contributionAmount);
     }
 
     /**
      * @dev Purchases the offer token with a contribution amount of purchase tokens
      * @dev If purchasing with ETH, contribution amount must equal ETH sent
      *
-     * @param _contributionAmount The contribution amount in purchase tokens
+     * @param contributionAmount The contribution amount in purchase tokens
      */
-    function purchase(uint256 _contributionAmount) external payable {
+    function purchase(uint256 contributionAmount) external payable {
         require(isPublicMintPeriod(), "Not public mint period");
 
-        _purchase(_contributionAmount);
+        _purchase(contributionAmount);
     }
 
-    function _purchase(uint256 _contributionAmount) internal nonReentrant {
+    function _purchase(uint256 contributionAmount) internal nonReentrant {
         require(saleInitiated, "Sale not open");
-        require(block.timestamp <= saleEndTimestamp, "Sale ended");
-        require(_contributionAmount > 0, "Must contribute");
+        require(block.timestamp <= saleEndTimestamp, "Sale not started or over");
+        require(contributionAmount > 0, "Must contribute");
 
         address sender = msg.sender;
         if (address(purchaseToken) == address(0)) {
-            // eth = purchase token
-            require(msg.value == _contributionAmount);
+            // purchase token is eth
+            require(msg.value == contributionAmount);
         } else {
-            purchaseToken.safeTransferFrom(sender, address(this), _contributionAmount);
+            purchaseToken.safeTransferFrom(sender, address(this), contributionAmount);
         }
 
-        (uint256 offerTokenAmount, uint256 feeInPurchaseToken) = calculateOfferTokenAmountAndPurchaseTokenFee(
-            _contributionAmount
-        );
+        uint256 offerTokenAmount = getCurrentMintAmount(contributionAmount);
+        uint256 feeInPurchaseToken = _divUp(contributionAmount * originationFee, 1e18);
+
+        // Check if over the total offering amount
+        if(offerTokenAmountSold + offerTokenAmount > totalOfferingAmount) {
+            // Refund sender for the extra amount sent
+            uint256 refundAmountInOfferTokens = offerTokenAmountSold + offerTokenAmount - totalOfferingAmount;
+            uint256 refundAmount = getPurchaseAmountFromOfferAmount(refundAmountInOfferTokens);
+            _returnPurchaseTokens(msg.sender, refundAmount);
+
+            // Modify token amount, contribution amount and fee amount
+            contributionAmount -= refundAmount;
+            offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
+            feeInPurchaseToken = _divUp(contributionAmount - refundAmount, 1e18);
+        }
 
         // Update the sale trackers
         offerTokenAmountPurchased[sender] += offerTokenAmount;
-        purchaseTokenContribution[sender] += _contributionAmount;
+        purchaseTokenContribution[sender] += contributionAmount;
         offerTokenAmountSold += offerTokenAmount;
-        purchaseTokensAcquired += _contributionAmount;
+        purchaseTokensAcquired += contributionAmount;
         originationCoreFees += feeInPurchaseToken;
 
         // Make sure offer token amount sold is not greater than the sale offering
@@ -257,7 +263,7 @@ contract FungibleOriginationPool is
             _createVestingEntry(sender, offerTokenAmount);
         }
 
-        emit Purchase(sender, _contributionAmount, offerTokenAmount, feeInPurchaseToken);
+        emit Purchase(sender, contributionAmount, offerTokenAmount, feeInPurchaseToken);
     }
 
     /**
@@ -352,19 +358,47 @@ contract FungibleOriginationPool is
     //--------------------------------------------------------------------------
 
     /**
-     * @dev Calculates the offer token amount and the fee to paid from a contribution amount of purchase tokens
+     * @dev Calculates the amount of tokens mintable by a given purchase token amount
      *
-     * @param _contributionAmount The contribution amount of purchase tokens
-     * @return offerTokenAmount The offer token amount
-     * @return feeInPurchaseToken The fee in purchase tokens
+     * @param contributionAmount The contribution amount of purchase tokens
+     * @return offerTokenAmount The offer token amount mintable
      */
-    function calculateOfferTokenAmountAndPurchaseTokenFee(uint256 _contributionAmount)
+    function getCurrentMintAmount(uint256 contributionAmount)
         public
         view
-        returns (uint256 offerTokenAmount, uint256 feeInPurchaseToken)
+        returns (uint256 offerTokenAmount)
     {
-        require(block.timestamp <= saleEndTimestamp, "Sale ended");
+        require(block.timestamp <= saleEndTimestamp, "Sale not started or over");
 
+        uint256 offerTokenPrice = getOfferTokenPrice();
+
+        // following line has 2 operations:
+        //    1. Convert contribution amount to Offer Tokens (contribution / price)
+        //    2. Convert previous operation from purchase token decimals to offer token decimals
+        offerTokenAmount = _divUp(
+            _divUp(contributionAmount * purchaseTokenDecimals, offerTokenPrice) * offerTokenDecimals,
+            purchaseTokenDecimals
+        );
+    }
+
+    /**
+     * Get purchase token amount from offer token amount
+     */
+    function getPurchaseAmountFromOfferAmount(uint256 mintAmount) public view returns (uint256 investedAmount) {
+        require(block.timestamp <= saleEndTimestamp, "Sale not started or over");
+        
+        uint256 offerTokenPrice = getOfferTokenPrice();
+
+        investedAmount = _divUp(
+            _divUp(mintAmount * offerTokenPrice, purchaseTokenDecimals) * purchaseTokenDecimals,
+            offerTokenDecimals
+        );
+    }
+
+    /**
+     * Return offer token price in purchase tokens (eth or erc-20)
+     */
+    function getOfferTokenPrice() public view returns (uint256 offerTokenPrice) {
         uint256 timeElapsed = block.timestamp - saleInitiatedTimestamp;
         // Whitelist mint period has different start and end prices
         uint256 _startingPrice = isWhitelistMintPeriod() ? whitelistStartingPrice : startingPrice;
@@ -377,19 +411,9 @@ contract FungibleOriginationPool is
         uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) / timeElapsed;
         uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
         // Determine the offer token price in purchase tokens
-        uint256 offerTokenPriceInPurchaseTokens = _startingPrice < _endingPrice
+        offerTokenPrice = _startingPrice < _endingPrice
             ? _startingPrice + saleDelta
             : _startingPrice - saleDelta;
-
-        // following line has 2 operations:
-        //    1. Convert contribution amount to Offer Tokens (contribution / price)
-        //    2. Convert previous operation from purchase token decimals to offer token decimals
-        offerTokenAmount = _divUp(
-            _divUp(_contributionAmount * purchaseTokenDecimals, offerTokenPriceInPurchaseTokens) * offerTokenDecimals,
-            purchaseTokenDecimals
-        );
-
-        feeInPurchaseToken = _divUp(_contributionAmount * originationFee, 1e18);
     }
 
     /**
