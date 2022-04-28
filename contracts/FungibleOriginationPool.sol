@@ -80,6 +80,7 @@ contract FungibleOriginationPool is
     // the timestamp of the beginning of the sale
     uint256 public saleInitiatedTimestamp;
     // the timestamp of the end of the sale
+    // sale can end if all offer tokens are purchased
     uint256 public saleEndTimestamp;
 
     // the amount of offer tokens vested
@@ -108,13 +109,12 @@ contract FungibleOriginationPool is
     // Events
     //--------------------------------------------------------------------------
 
-    event InitiateSale(uint256 saleEndTimestamp, uint256 totalOfferingAmount);
+    event InitiateSale(uint256 totalOfferingAmount);
     event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
     event Purchase(address indexed purchaser, uint256 contributionAmount, uint256 offerAmount, uint256 purchaseFee);
     event CreateVestingEntry(
         address indexed purchaser,
-        uint256 vestingId, 
-        uint256 saleEndTimestamp,
+        uint256 vestingId,
         uint256 offerTokenAmount
     );
     event ClaimVested(address indexed purchaser, uint256 tokenAmountClaimed, uint256 tokenAmountRemaining);
@@ -241,6 +241,9 @@ contract FungibleOriginationPool is
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
             feeInPurchaseToken = _divUp(contributionAmount - refundAmount, 1e18);
+
+            // Indicate sale is over
+            saleEndTimestamp = block.timestamp;
         }
 
         // Update the sale trackers
@@ -283,7 +286,7 @@ contract FungibleOriginationPool is
             IVestingEntryNFT.VestingAmounts({ tokenAmount: _offerTokenAmount, tokenAmountClaimed: 0 })
         );
 
-        emit CreateVestingEntry(_sender, vestingID, saleEndTimestamp, _offerTokenAmount);
+        emit CreateVestingEntry(_sender, vestingID, _offerTokenAmount);
         vestingID++;
 
         amountVested += _offerTokenAmount;
@@ -473,7 +476,7 @@ contract FungibleOriginationPool is
         uint256 saleDuration = whitelistSaleDuration + publicSaleDuration;
         saleEndTimestamp = saleInitiatedTimestamp + saleDuration;
 
-        emit InitiateSale(saleEndTimestamp, totalOfferingAmount);
+        emit InitiateSale(totalOfferingAmount);
     }
 
     /**
