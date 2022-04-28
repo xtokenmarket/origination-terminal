@@ -17,15 +17,22 @@ contract NonFungibleOriginationPoolProxy is TransparentUpgradeableProxy {
 
     function upgradeTo(address _implementation) external override ifAdmin {
         require(
-            poolDeployer.nonFungibleOriginationPoolImplementation() == _implementation,
+            poolDeployer.nonFungibleOriginationPoolImplementation() ==
+                _implementation,
             "Can only upgrade to latest nonFungibleOriginationPool implementation"
         );
         _upgradeTo(_implementation);
     }
 
-    function upgradeToAndCall(address _implementation, bytes calldata data) external payable override ifAdmin {
+    function upgradeToAndCall(address _implementation, bytes calldata data)
+        external
+        payable
+        override
+        ifAdmin
+    {
         require(
-            poolDeployer.nonFungibleOriginationPoolImplementation() == _implementation,
+            poolDeployer.nonFungibleOriginationPoolImplementation() ==
+                _implementation,
             "Can only upgrade to latest nonFungibleOriginationPool implementation"
         );
         _upgradeTo(_implementation);

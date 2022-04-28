@@ -15,7 +15,10 @@ interface IxTokenManager {
     /**
      * @dev Check if an address is a manager for a fund
      */
-    function isManager(address manager, address fund) external view returns (bool);
+    function isManager(address manager, address fund)
+        external
+        view
+        returns (bool);
 
     /**
      * @dev Set revenue controller

@@ -111,13 +111,22 @@ contract FungibleOriginationPool is
 
     event InitiateSale(uint256 totalOfferingAmount);
     event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
-    event Purchase(address indexed purchaser, uint256 contributionAmount, uint256 offerAmount, uint256 purchaseFee);
+    event Purchase(
+        address indexed purchaser,
+        uint256 contributionAmount,
+        uint256 offerAmount,
+        uint256 purchaseFee
+    );
     event CreateVestingEntry(
         address indexed purchaser,
         uint256 vestingId,
         uint256 offerTokenAmount
     );
-    event ClaimVested(address indexed purchaser, uint256 tokenAmountClaimed, uint256 tokenAmountRemaining);
+    event ClaimVested(
+        address indexed purchaser,
+        uint256 tokenAmountClaimed,
+        uint256 tokenAmountRemaining
+    );
 
     //--------------------------------------------------------------------------
     // Modifiers
@@ -156,15 +165,23 @@ contract FungibleOriginationPool is
         offerToken = IERC20Metadata(_saleParams.offerToken);
         purchaseToken = IERC20Metadata(_saleParams.purchaseToken);
         offerTokenDecimals = 10**offerToken.decimals();
-        purchaseTokenDecimals = _saleParams.purchaseToken == address(0) ? 10**18 : 10**purchaseToken.decimals();
+        purchaseTokenDecimals = _saleParams.purchaseToken == address(0)
+            ? 10**18
+            : 10**purchaseToken.decimals();
 
         startingPrice = _saleParams.startingPrice;
         endingPrice = _saleParams.endingPrice;
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
-        require(_saleParams.publicSaleDuration <= MAX_SALE_DURATION, "Invalid sale duration");
-        require(_saleParams.whitelistSaleDuration <= MAX_SALE_DURATION, "Invalid whitelist sale duration");
+        require(
+            _saleParams.publicSaleDuration <= MAX_SALE_DURATION,
+            "Invalid sale duration"
+        );
+        require(
+            _saleParams.whitelistSaleDuration <= MAX_SALE_DURATION,
+            "Invalid whitelist sale duration"
+        );
         publicSaleDuration = _saleParams.publicSaleDuration;
         whitelistSaleDuration = _saleParams.whitelistSaleDuration;
 
@@ -193,11 +210,21 @@ contract FungibleOriginationPool is
      * @param merkleProof The merkle proof associated with msg.sender to prove whitelisted
      * @param contributionAmount The contribution amount in purchase tokens
      */
-    function whitelistPurchase(bytes32[] calldata merkleProof, uint256 contributionAmount) external payable {
+    function whitelistPurchase(
+        bytes32[] calldata merkleProof,
+        uint256 contributionAmount
+    ) external payable {
         require(whitelist.enabled, "Whitelist not enabled");
         require(isWhitelistMintPeriod(), "Not whitelist period");
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
-        require(MerkleProof.verify(merkleProof, whitelist.whitelistMerkleRoot, leaf), "Address not whitelisted");
+        require(
+            MerkleProof.verify(
+                merkleProof,
+                whitelist.whitelistMerkleRoot,
+                leaf
+            ),
+            "Address not whitelisted"
+        );
 
         _purchase(contributionAmount);
     }
@@ -216,7 +243,10 @@ contract FungibleOriginationPool is
 
     function _purchase(uint256 contributionAmount) internal nonReentrant {
         require(saleInitiated, "Sale not open");
-        require(block.timestamp <= saleEndTimestamp, "Sale not started or over");
+        require(
+            block.timestamp <= saleEndTimestamp,
+            "Sale not started or over"
+        );
         require(contributionAmount > 0, "Must contribute");
 
         address sender = msg.sender;
@@ -224,23 +254,37 @@ contract FungibleOriginationPool is
             // purchase token is eth
             require(msg.value == contributionAmount);
         } else {
-            purchaseToken.safeTransferFrom(sender, address(this), contributionAmount);
+            purchaseToken.safeTransferFrom(
+                sender,
+                address(this),
+                contributionAmount
+            );
         }
 
         uint256 offerTokenAmount = getCurrentMintAmount(contributionAmount);
-        uint256 feeInPurchaseToken = _divUp(contributionAmount * originationFee, 1e18);
+        uint256 feeInPurchaseToken = _divUp(
+            contributionAmount * originationFee,
+            1e18
+        );
 
         // Check if over the total offering amount
-        if(offerTokenAmountSold + offerTokenAmount > totalOfferingAmount) {
+        if (offerTokenAmountSold + offerTokenAmount > totalOfferingAmount) {
             // Refund sender for the extra amount sent
-            uint256 refundAmountInOfferTokens = offerTokenAmountSold + offerTokenAmount - totalOfferingAmount;
-            uint256 refundAmount = getPurchaseAmountFromOfferAmount(refundAmountInOfferTokens);
+            uint256 refundAmountInOfferTokens = offerTokenAmountSold +
+                offerTokenAmount -
+                totalOfferingAmount;
+            uint256 refundAmount = getPurchaseAmountFromOfferAmount(
+                refundAmountInOfferTokens
+            );
             _returnPurchaseTokens(msg.sender, refundAmount);
 
             // Modify token amount, contribution amount and fee amount
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
-            feeInPurchaseToken = _divUp(contributionAmount - refundAmount, 1e18);
+            feeInPurchaseToken = _divUp(
+                contributionAmount - refundAmount,
+                1e18
+            );
 
             // Indicate sale is over
             saleEndTimestamp = block.timestamp;
@@ -254,11 +298,15 @@ contract FungibleOriginationPool is
         originationCoreFees += feeInPurchaseToken;
 
         // Make sure offer token amount sold is not greater than the sale offering
-        require(offerTokenAmountSold <= totalOfferingAmount, "Sale amount greater than offering");
+        require(
+            offerTokenAmountSold <= totalOfferingAmount,
+            "Sale amount greater than offering"
+        );
 
         // If sale is whitelisted, check to ensure purchase cap is not exceeded
         require(
-            !whitelist.enabled || offerTokenAmountPurchased[sender] <= whitelist.purchaseCap,
+            !whitelist.enabled ||
+                offerTokenAmountPurchased[sender] <= whitelist.purchaseCap,
             "Must not exceed purchase cap"
         );
 
@@ -266,7 +314,12 @@ contract FungibleOriginationPool is
             _createVestingEntry(sender, offerTokenAmount);
         }
 
-        emit Purchase(sender, contributionAmount, offerTokenAmount, feeInPurchaseToken);
+        emit Purchase(
+            sender,
+            contributionAmount,
+            offerTokenAmount,
+            feeInPurchaseToken
+        );
     }
 
     /**
@@ -276,14 +329,19 @@ contract FungibleOriginationPool is
      * @param _sender The purchaser
      * @param _offerTokenAmount The offer token amount
      */
-    function _createVestingEntry(address _sender, uint256 _offerTokenAmount) private {
+    function _createVestingEntry(address _sender, uint256 _offerTokenAmount)
+        private
+    {
         // Add user address to vesting id mapping
         userToVestingId[_sender] = vestingID;
 
         vestingEntryNFT.mint(
             _sender,
             vestingID,
-            IVestingEntryNFT.VestingAmounts({ tokenAmount: _offerTokenAmount, tokenAmountClaimed: 0 })
+            IVestingEntryNFT.VestingAmounts({
+                tokenAmount: _offerTokenAmount,
+                tokenAmountClaimed: 0
+            })
         );
 
         emit CreateVestingEntry(_sender, vestingID, _offerTokenAmount);
@@ -300,24 +358,47 @@ contract FungibleOriginationPool is
      */
     function claimVested(uint256[] calldata _nftIds) external nonReentrant {
         require(block.timestamp > saleEndTimestamp, "Sale has not ended");
-        require(saleEndTimestamp + cliffPeriod < block.timestamp, "Not past cliff period");
+        require(
+            saleEndTimestamp + cliffPeriod < block.timestamp,
+            "Not past cliff period"
+        );
 
         if (purchaseTokensAcquired >= reserveAmount) {
             for (uint256 i = 0; i < _nftIds.length; i++) {
                 uint256 entryId = _nftIds[i];
-                (uint256 tokenAmount, uint256 tokenAmountClaimed) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
+                (
+                    uint256 tokenAmount,
+                    uint256 tokenAmountClaimed
+                ) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
                 address ownerOfEntry = vestingEntryNFT.ownerOf(entryId);
-                require(ownerOfEntry == msg.sender, "User not owner of vest id");
-                require(tokenAmount != tokenAmountClaimed, "User has already claimed his token vesting");
+                require(
+                    ownerOfEntry == msg.sender,
+                    "User not owner of vest id"
+                );
+                require(
+                    tokenAmount != tokenAmountClaimed,
+                    "User has already claimed his token vesting"
+                );
 
-                uint256 offerTokenPayout = calculateClaimableVestedAmount(tokenAmount, tokenAmountClaimed);
+                uint256 offerTokenPayout = calculateClaimableVestedAmount(
+                    tokenAmount,
+                    tokenAmountClaimed
+                );
                 uint256 tokenAmountRemaining = tokenAmount - tokenAmountClaimed;
-                vestingEntryNFT.setVestingAmounts(entryId, tokenAmount, tokenAmountClaimed + offerTokenPayout);
+                vestingEntryNFT.setVestingAmounts(
+                    entryId,
+                    tokenAmount,
+                    tokenAmountClaimed + offerTokenPayout
+                );
 
                 offerToken.safeTransfer(msg.sender, offerTokenPayout);
                 amountVested -= offerTokenPayout;
 
-                emit ClaimVested(msg.sender, offerTokenPayout, tokenAmountRemaining);
+                emit ClaimVested(
+                    msg.sender,
+                    offerTokenPayout,
+                    tokenAmountRemaining
+                );
             }
         }
     }
@@ -332,24 +413,35 @@ contract FungibleOriginationPool is
         uint256 tokenAmount;
         if (purchaseTokensAcquired >= reserveAmount) {
             // Sale reached the reserve amount therefore send acquired offer tokens
-            require(offerTokenAmountPurchased[msg.sender] > 0, "No purchase made");
-            require(vestingPeriod == 0, "Tokens must be claimed using claimVested");
+            require(
+                offerTokenAmountPurchased[msg.sender] > 0,
+                "No purchase made"
+            );
+            require(
+                vestingPeriod == 0,
+                "Tokens must be claimed using claimVested"
+            );
             tokenAmount = offerTokenAmountPurchased[msg.sender];
             offerTokenAmountPurchased[msg.sender] = 0;
             offerToken.safeTransfer(msg.sender, tokenAmount);
         } else {
             // Sale did not reach reserve amount therefore return purchase tokens
-            require(purchaseTokenContribution[msg.sender] > 0, "No contribution made");
+            require(
+                purchaseTokenContribution[msg.sender] > 0,
+                "No contribution made"
+            );
             tokenAmount = purchaseTokenContribution[msg.sender];
             purchaseTokenContribution[msg.sender] = 0;
             _returnPurchaseTokens(msg.sender, tokenAmount);
         }
     }
 
-    function _returnPurchaseTokens(address purchaser, uint256 tokenAmount) internal {
+    function _returnPurchaseTokens(address purchaser, uint256 tokenAmount)
+        internal
+    {
         if (address(purchaseToken) == address(0)) {
             // send eth
-            (bool success, ) = payable(purchaser).call{ value: tokenAmount }("");
+            (bool success, ) = payable(purchaser).call{value: tokenAmount}("");
             require(success);
         } else {
             purchaseToken.safeTransfer(purchaser, tokenAmount);
@@ -371,7 +463,10 @@ contract FungibleOriginationPool is
         view
         returns (uint256 offerTokenAmount)
     {
-        require(block.timestamp <= saleEndTimestamp, "Sale not started or over");
+        require(
+            block.timestamp <= saleEndTimestamp,
+            "Sale not started or over"
+        );
 
         uint256 offerTokenPrice = getOfferTokenPrice();
 
@@ -379,7 +474,10 @@ contract FungibleOriginationPool is
         //    1. Convert contribution amount to Offer Tokens (contribution / price)
         //    2. Convert previous operation from purchase token decimals to offer token decimals
         offerTokenAmount = _divUp(
-            _divUp(contributionAmount * purchaseTokenDecimals, offerTokenPrice) * offerTokenDecimals,
+            _divUp(
+                contributionAmount * purchaseTokenDecimals,
+                offerTokenPrice
+            ) * offerTokenDecimals,
             purchaseTokenDecimals
         );
     }
@@ -387,13 +485,21 @@ contract FungibleOriginationPool is
     /**
      * Get purchase token amount from offer token amount
      */
-    function getPurchaseAmountFromOfferAmount(uint256 mintAmount) public view returns (uint256 investedAmount) {
-        require(block.timestamp <= saleEndTimestamp, "Sale not started or over");
-        
+    function getPurchaseAmountFromOfferAmount(uint256 mintAmount)
+        public
+        view
+        returns (uint256 investedAmount)
+    {
+        require(
+            block.timestamp <= saleEndTimestamp,
+            "Sale not started or over"
+        );
+
         uint256 offerTokenPrice = getOfferTokenPrice();
 
         investedAmount = _divUp(
-            _divUp(mintAmount * offerTokenPrice, purchaseTokenDecimals) * purchaseTokenDecimals,
+            _divUp(mintAmount * offerTokenPrice, purchaseTokenDecimals) *
+                purchaseTokenDecimals,
             offerTokenDecimals
         );
     }
@@ -401,17 +507,26 @@ contract FungibleOriginationPool is
     /**
      * Return offer token price in purchase tokens (eth or erc-20)
      */
-    function getOfferTokenPrice() public view returns (uint256 offerTokenPrice) {
+    function getOfferTokenPrice()
+        public
+        view
+        returns (uint256 offerTokenPrice)
+    {
         uint256 timeElapsed = block.timestamp - saleInitiatedTimestamp;
         // Whitelist mint period has different start and end prices
-        uint256 _startingPrice = isWhitelistMintPeriod() ? whitelistStartingPrice : startingPrice;
-        uint256 _endingPrice = isWhitelistMintPeriod() ? whitelistEndingPrice : endingPrice;
+        uint256 _startingPrice = isWhitelistMintPeriod()
+            ? whitelistStartingPrice
+            : startingPrice;
+        uint256 _endingPrice = isWhitelistMintPeriod()
+            ? whitelistEndingPrice
+            : endingPrice;
         // Get the start / end price difference
         uint256 saleRange = _startingPrice < _endingPrice
             ? _endingPrice - _startingPrice
             : _startingPrice - _endingPrice;
         uint256 saleDuration = whitelistSaleDuration + publicSaleDuration;
-        uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) / timeElapsed;
+        uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) /
+            timeElapsed;
         uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
         // Determine the offer token price in purchase tokens
         offerTokenPrice = _startingPrice < _endingPrice
@@ -426,16 +541,16 @@ contract FungibleOriginationPool is
      * @param tokenAmountClaimed the claimed token amount
      * @return vestableTokenAmount The claimable offer token amount
      */
-    function calculateClaimableVestedAmount(uint256 tokenAmount, uint256 tokenAmountClaimed)
-        public
-        view
-        returns (uint256 vestableTokenAmount)
-    {
+    function calculateClaimableVestedAmount(
+        uint256 tokenAmount,
+        uint256 tokenAmountClaimed
+    ) public view returns (uint256 vestableTokenAmount) {
         uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
 
         vestableTokenAmount = timeSinceInit >= vestingPeriod
             ? tokenAmount - tokenAmountClaimed
-            : ((timeSinceInit * tokenAmount) / vestingPeriod) - tokenAmountClaimed;
+            : ((timeSinceInit * tokenAmount) / vestingPeriod) -
+                tokenAmountClaimed;
     }
 
     function isWhitelistMintPeriod() public view returns (bool) {
@@ -445,8 +560,11 @@ contract FungibleOriginationPool is
     }
 
     function isPublicMintPeriod() public view returns (bool) {
-        uint256 endOfWhitelistPeriod = saleInitiatedTimestamp + whitelistSaleDuration;
-        return block.timestamp > endOfWhitelistPeriod && block.timestamp <= (endOfWhitelistPeriod + publicSaleDuration);
+        uint256 endOfWhitelistPeriod = saleInitiatedTimestamp +
+            whitelistSaleDuration;
+        return
+            block.timestamp > endOfWhitelistPeriod &&
+            block.timestamp <= (endOfWhitelistPeriod + publicSaleDuration);
     }
 
     /**
@@ -470,7 +588,11 @@ contract FungibleOriginationPool is
     function initiateSale() external onlyOwnerOrManager {
         require(!saleInitiated, "Sale already initiated");
 
-        offerToken.safeTransferFrom(msg.sender, address(this), totalOfferingAmount);
+        offerToken.safeTransferFrom(
+            msg.sender,
+            address(this),
+            totalOfferingAmount
+        );
         saleInitiated = true;
         saleInitiatedTimestamp = block.timestamp;
         uint256 saleDuration = whitelistSaleDuration + publicSaleDuration;
@@ -495,26 +617,37 @@ contract FungibleOriginationPool is
             if (address(purchaseToken) == address(0)) {
                 // purchaseToken = eth
                 claimAmount = address(this).balance - originationCoreFees;
-                (bool success, ) = owner().call{ value: claimAmount }("");
+                (bool success, ) = owner().call{value: claimAmount}("");
                 require(success);
                 // send fees to core
-                originationCore.receiveFees{ value: originationCoreFees }();
+                originationCore.receiveFees{value: originationCoreFees}();
                 require(success);
             } else {
-                claimAmount = purchaseToken.balanceOf(address(this)) - originationCoreFees;
+                claimAmount =
+                    purchaseToken.balanceOf(address(this)) -
+                    originationCoreFees;
                 purchaseToken.safeTransfer(owner(), claimAmount);
-                purchaseToken.safeTransfer(address(originationCore), originationCoreFees);
+                purchaseToken.safeTransfer(
+                    address(originationCore),
+                    originationCoreFees
+                );
             }
 
             // return the unsold offerTokens
             if (offerTokenAmountSold < totalOfferingAmount) {
-                offerToken.safeTransfer(owner(), totalOfferingAmount - offerTokenAmountSold);
+                offerToken.safeTransfer(
+                    owner(),
+                    totalOfferingAmount - offerTokenAmountSold
+                );
             }
 
             emit PurchaseTokenClaim(owner(), claimAmount);
         } else {
             // return all offer tokens back to owner
-            offerToken.safeTransfer(owner(), offerToken.balanceOf(address(this)));
+            offerToken.safeTransfer(
+                owner(),
+                offerToken.balanceOf(address(this))
+            );
         }
     }
 
@@ -523,7 +656,10 @@ contract FungibleOriginationPool is
      *
      * @param _whitelist The whitelist
      */
-    function setWhitelist(Whitelist calldata _whitelist) external onlyOwnerOrManager {
+    function setWhitelist(Whitelist calldata _whitelist)
+        external
+        onlyOwnerOrManager
+    {
         require(!saleInitiated, "Cannot set whitelist after sale initiated");
 
         whitelist = _whitelist;

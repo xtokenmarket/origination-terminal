@@ -17,15 +17,22 @@ contract FungibleOriginationPoolProxy is TransparentUpgradeableProxy {
 
     function upgradeTo(address _implementation) external override ifAdmin {
         require(
-            poolDeployer.fungibleOriginationPoolImplementation() == _implementation,
+            poolDeployer.fungibleOriginationPoolImplementation() ==
+                _implementation,
             "Can only upgrade to latest fungibleOriginationPool implementation"
         );
         _upgradeTo(_implementation);
     }
 
-    function upgradeToAndCall(address _implementation, bytes calldata data) external payable override ifAdmin {
+    function upgradeToAndCall(address _implementation, bytes calldata data)
+        external
+        payable
+        override
+        ifAdmin
+    {
         require(
-            poolDeployer.fungibleOriginationPoolImplementation() == _implementation,
+            poolDeployer.fungibleOriginationPoolImplementation() ==
+                _implementation,
             "Can only upgrade to latest fungibleOriginationPool implementation"
         );
         _upgradeTo(_implementation);

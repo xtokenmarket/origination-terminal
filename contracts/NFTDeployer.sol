@@ -16,7 +16,9 @@ contract NFTDeployer {
     }
 
     function deployVestingEntryNFT() external returns (address pool) {
-        VestingEntryNFTProxy proxy = new VestingEntryNFTProxy(vestingEntryNFTImplementation);
+        VestingEntryNFTProxy proxy = new VestingEntryNFTProxy(
+            vestingEntryNFTImplementation
+        );
         return address(proxy);
     }
 }

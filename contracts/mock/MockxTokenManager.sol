@@ -31,7 +31,11 @@ contract MockxTokenManager is Ownable {
     /**
      * @dev Check if an address is a manager for a fund
      */
-    function isManager(address manager, address fund) public view returns (bool) {
+    function isManager(address manager, address fund)
+        public
+        view
+        returns (bool)
+    {
         return managers[manager][fund];
     }
 
@@ -39,7 +43,10 @@ contract MockxTokenManager is Ownable {
      * @dev Set revenue controller
      */
     function setRevenueController(address controller) external onlyOwner {
-        require(revenueController == address(0), "Revenue controller can be set only once");
+        require(
+            revenueController == address(0),
+            "Revenue controller can be set only once"
+        );
         revenueController = controller;
     }
 

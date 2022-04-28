@@ -14,14 +14,24 @@ contract PoolDeployer is Ownable {
     address public fungibleOriginationPoolImplementation;
     address public nonFungibleOriginationPoolImplementation;
 
-    constructor(address _fungibleOriginationPoolImplementation, address _nonFungibleOriginationPoolImplementation) {
+    constructor(
+        address _fungibleOriginationPoolImplementation,
+        address _nonFungibleOriginationPoolImplementation
+    ) {
         fungibleOriginationPoolImplementation = _fungibleOriginationPoolImplementation;
         nonFungibleOriginationPoolImplementation = _nonFungibleOriginationPoolImplementation;
-        emit FungibleOriginationPoolImplementationSet(_fungibleOriginationPoolImplementation);
-        emit NonFungibleOriginationPoolImplementationSet(_nonFungibleOriginationPoolImplementation);
+        emit FungibleOriginationPoolImplementationSet(
+            _fungibleOriginationPoolImplementation
+        );
+        emit NonFungibleOriginationPoolImplementationSet(
+            _nonFungibleOriginationPoolImplementation
+        );
     }
 
-    function deployFungibleOriginationPool(address _proxyAdmin) external returns (address pool) {
+    function deployFungibleOriginationPool(address _proxyAdmin)
+        external
+        returns (address pool)
+    {
         FungibleOriginationPoolProxy proxy = new FungibleOriginationPoolProxy(
             fungibleOriginationPoolImplementation,
             _proxyAdmin,
@@ -30,34 +40,43 @@ contract PoolDeployer is Ownable {
         return address(proxy);
     }
 
-    function deployNonFungibleOriginationPool(address _proxyAdmin) external returns (address pool) {
+    function deployNonFungibleOriginationPool(address _proxyAdmin)
+        external
+        returns (address pool)
+    {
         NonFungibleOriginationPoolProxy proxy = new NonFungibleOriginationPoolProxy(
-            nonFungibleOriginationPoolImplementation,
-            _proxyAdmin,
-            address(this)
-        );
+                nonFungibleOriginationPoolImplementation,
+                _proxyAdmin,
+                address(this)
+            );
         return address(proxy);
     }
 
-    function setFungibleOriginationPoolImplementation(address _fungibleOriginationPoolImplementation)
-        external
-        onlyOwner
-    {
+    function setFungibleOriginationPoolImplementation(
+        address _fungibleOriginationPoolImplementation
+    ) external onlyOwner {
         fungibleOriginationPoolImplementation = _fungibleOriginationPoolImplementation;
-        emit FungibleOriginationPoolImplementationSet(_fungibleOriginationPoolImplementation);
+        emit FungibleOriginationPoolImplementationSet(
+            _fungibleOriginationPoolImplementation
+        );
     }
 
-    function setNonFungibleOriginationPoolImplementation(address _nonFungibleOriginationPoolImplementation)
-        external
-        onlyOwner
-    {
+    function setNonFungibleOriginationPoolImplementation(
+        address _nonFungibleOriginationPoolImplementation
+    ) external onlyOwner {
         nonFungibleOriginationPoolImplementation = _nonFungibleOriginationPoolImplementation;
-        emit NonFungibleOriginationPoolImplementationSet(_nonFungibleOriginationPoolImplementation);
+        emit NonFungibleOriginationPoolImplementationSet(
+            _nonFungibleOriginationPoolImplementation
+        );
     }
 
     // Events
 
-    event FungibleOriginationPoolImplementationSet(address indexed fungibleOriginationPoolImplementation);
+    event FungibleOriginationPoolImplementationSet(
+        address indexed fungibleOriginationPoolImplementation
+    );
 
-    event NonFungibleOriginationPoolImplementationSet(address indexed nonFungibleOriginationPoolImplementation);
+    event NonFungibleOriginationPoolImplementationSet(
+        address indexed nonFungibleOriginationPoolImplementation
+    );
 }

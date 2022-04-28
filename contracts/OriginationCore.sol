@@ -17,7 +17,11 @@ import "./interface/IxTokenManager.sol";
 import "./interface/INonFungibleToken.sol";
 
 // TODO: add dynamic deployment fee like we added for Mining
-contract OriginationCore is IOriginationCore, Initializable, OwnableUpgradeable {
+contract OriginationCore is
+    IOriginationCore,
+    Initializable,
+    OwnableUpgradeable
+{
     //--------------------------------------------------------------------------
     // State variables
     //--------------------------------------------------------------------------
@@ -98,13 +102,23 @@ contract OriginationCore is IOriginationCore, Initializable, OwnableUpgradeable 
      *
      * @param saleParams The token sale params
      */
-    function createFungibleListing(IFungibleOriginationPool.SaleParams calldata saleParams) external payable {
+    function createFungibleListing(
+        IFungibleOriginationPool.SaleParams calldata saleParams
+    ) external payable {
         require(msg.value == listingFee, "Incorrect listing fee");
-        require(saleParams.offerToken != saleParams.purchaseToken, "Invalid offering");
-        require(saleParams.vestingPeriod >= saleParams.cliffPeriod, "Invalid vesting terms");
+        require(
+            saleParams.offerToken != saleParams.purchaseToken,
+            "Invalid offering"
+        );
+        require(
+            saleParams.vestingPeriod >= saleParams.cliffPeriod,
+            "Invalid vesting terms"
+        );
 
         // Deploy the pool
-        address originationPool = poolDeployer.deployFungibleOriginationPool(address(proxyAdmin));
+        address originationPool = poolDeployer.deployFungibleOriginationPool(
+            address(proxyAdmin)
+        );
         // Deploy the vesting entry nft
         address vestingEntryNFT = nftDeployer.deployVestingEntryNFT();
 
@@ -131,20 +145,34 @@ contract OriginationCore is IOriginationCore, Initializable, OwnableUpgradeable 
      *
      * @param saleParams The NFT sale params
      */
-    function createNonFungibleListing(INonFungibleOriginationPool.SaleParams calldata saleParams) external payable {
+    function createNonFungibleListing(
+        INonFungibleOriginationPool.SaleParams calldata saleParams
+    ) external payable {
         require(msg.value == listingFee, "Incorrect listing fee");
-        require(saleParams.maxWhitelistMintable <= saleParams.maxTotalMintable, "Invalid mintable");
+        require(
+            saleParams.maxWhitelistMintable <= saleParams.maxTotalMintable,
+            "Invalid mintable"
+        );
 
         // Deploy the pool
-        address originationPool = poolDeployer.deployNonFungibleOriginationPool(address(proxyAdmin));
+        address originationPool = poolDeployer.deployNonFungibleOriginationPool(
+            address(proxyAdmin)
+        );
 
         // Set proxy admin
         proxyAdmin.addProxyAdmin(originationPool, msg.sender);
 
         // Initialize the proxy
-        INonFungibleOriginationPool(originationPool).initialize(originationFee, this, msg.sender, saleParams);
+        INonFungibleOriginationPool(originationPool).initialize(
+            originationFee,
+            this,
+            msg.sender,
+            saleParams
+        );
 
-        INonFungibleToken(saleParams.collection).setOriginationInstance(originationPool);
+        INonFungibleToken(saleParams.collection).setOriginationInstance(
+            originationPool
+        );
 
         // emit event
         emit CreateNonFungibleListing(originationPool, msg.sender);
@@ -171,13 +199,21 @@ contract OriginationCore is IOriginationCore, Initializable, OwnableUpgradeable 
      * @param _feeToken The token address of the fee to claim
      */
     function claimFees(address _feeToken) external {
-        require(xTokenManager.isRevenueController(msg.sender), "Only callable by revenue controller.");
+        require(
+            xTokenManager.isRevenueController(msg.sender),
+            "Only callable by revenue controller."
+        );
 
         if (_feeToken == address(0)) {
-            (bool success, ) = msg.sender.call{ value: address(this).balance }("");
+            (bool success, ) = msg.sender.call{value: address(this).balance}(
+                ""
+            );
             require(success);
         } else {
-            IERC20(_feeToken).transfer(msg.sender, IERC20(_feeToken).balanceOf(address(this)));
+            IERC20(_feeToken).transfer(
+                msg.sender,
+                IERC20(_feeToken).balanceOf(address(this))
+            );
         }
     }
 
