@@ -209,14 +209,20 @@ contract FungibleOriginationPool is
      *
      * @param merkleProof The merkle proof associated with msg.sender to prove whitelisted
      * @param contributionAmount The contribution amount in purchase tokens
+     * @param maxContributionAmount The max contribution amount for this address
      */
     function whitelistPurchase(
         bytes32[] calldata merkleProof,
-        uint256 contributionAmount
+        uint256 contributionAmount,
+        uint256 maxContributionAmount
     ) external payable {
         require(whitelist.enabled, "Whitelist not enabled");
         require(isWhitelistMintPeriod(), "Not whitelist period");
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
+        bytes32 leaf = keccak256(
+            abi.encodePacked(msg.sender, maxContributionAmount)
+        );
+        // Verify address is whitelisted
+        // Requires address and max contribution amount for that address
         require(
             MerkleProof.verify(
                 merkleProof,
@@ -225,6 +231,20 @@ contract FungibleOriginationPool is
             ),
             "Address not whitelisted"
         );
+        // If contribution amount is exceeded invest as much as possible
+        if (
+            purchaseTokenContribution[msg.sender] + contributionAmount >
+            maxContributionAmount
+        ) {
+            contributionAmount =
+                maxContributionAmount -
+                purchaseTokenContribution[msg.sender];
+            // If user has reached his limit completely revert
+            require(
+                contributionAmount != 0,
+                "User has reached his max contribution amount"
+            );
+        }
 
         _purchase(contributionAmount);
     }

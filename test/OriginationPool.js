@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const createFixture = require("./fixture");
 const { advanceTime } = require("./utils");
 const { BigNumber } = require("ethers");
-const { increaseTime, setBalance } = require("../scripts/helpers");
+const { increaseTime, setBalance, getMerkleWhitelist } = require("../scripts/helpers");
 
 describe("FungibleOriginationPool", async () => {
   let deployer, user, user1;
@@ -25,6 +25,7 @@ describe("FungibleOriginationPool", async () => {
   let deployerProof;
   let userProof;
   let purchaseCap;
+  let whitelist;
 
   describe("Purchase token not ETH", async () => {
     beforeEach(async () => {
@@ -43,6 +44,7 @@ describe("FungibleOriginationPool", async () => {
         deployerProof,
         userProof,
         purchaseCap,
+        whitelist
       } = await createFixture());
       [deployer, user] = accounts;
     });
@@ -169,7 +171,7 @@ describe("FungibleOriginationPool", async () => {
 
       const purchaseBalanceBefore = await purchaseToken.balanceOf(user.address);
 
-      await originationPoolWhitelist.connect(user).whitelistPurchase(userProof, amountIn);
+      await originationPoolWhitelist.connect(user).whitelistPurchase(userProof, amountIn, whitelist[user.address]);
       await advanceTime(86401 * 2);
       await originationPoolWhitelist.connect(user).claimTokens();
       expect(await originationPoolWhitelist.offerTokenAmountPurchased(user.address)).to.equal(0);
@@ -193,7 +195,10 @@ describe("FungibleOriginationPool", async () => {
       const offerBalanceBefore = await offerToken.balanceOf(user.address);
       expect(offerBalanceBefore).to.equal(0);
 
-      await expect(originationPoolWhitelist.connect(user).whitelistPurchase(deployerProof, amountIn)).to.be.revertedWith(
+      let whitelist = await getMerkleWhitelist();
+
+      await expect(originationPoolWhitelist.connect(user).whitelistPurchase(deployerProof, amountIn, whitelist[user.address])).
+      to.be.revertedWith(
         "Address not whitelisted"
       );
     });
@@ -541,6 +546,7 @@ describe("FungibleOriginationPool", async () => {
         rootHash,
         deployerProof,
         userProof,
+        whitelist
       } = await createFixture());
       [deployer, user] = accounts;
     });
@@ -602,7 +608,7 @@ describe("FungibleOriginationPool", async () => {
       expect(offerBalanceBefore).to.equal(0);
 
       await expect(
-        await originationPoolETHWhitelist.connect(user).whitelistPurchase(userProof, amountIn, { value: amountIn })
+        await originationPoolETHWhitelist.connect(user).whitelistPurchase(userProof, amountIn, whitelist[user.address], { value: amountIn })
       ).to.changeEtherBalance(user, amountIn.mul(-1));
       await advanceTime(86401 * 2);
       await originationPoolETHWhitelist.connect(user).claimTokens();
@@ -626,7 +632,8 @@ describe("FungibleOriginationPool", async () => {
       expect(offerBalanceBefore).to.equal(0);
 
       await expect(
-        originationPoolETHWhitelist.connect(user).whitelistPurchase(deployerProof, amountIn, { value: amountIn })
+        originationPoolETHWhitelist.connect(user).whitelistPurchase(
+          deployerProof, amountIn, whitelist[user.address], { value: amountIn })
       ).to.be.revertedWith("Address not whitelisted");
     });
 

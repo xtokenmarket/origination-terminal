@@ -1,7 +1,7 @@
 const { ethers, deployments, upgrades } = require("hardhat");
 const { MerkleTree } = require("merkletreejs");
 const keccak256 = require("keccak256");
-const { deployArgs, deploy } = require("../scripts/helpers");
+const { deployArgs, deploy, getMerkleTree, getMerkleProofs, getMerkleWhitelist } = require("../scripts/helpers");
 
 const createFixture = deployments.createFixture(async () => {
   // get signers
@@ -14,13 +14,10 @@ const createFixture = deployments.createFixture(async () => {
   const purchaseTokenDecimalsLower = await deployArgs("MockERC20", "Purchase", "PRCH", 6);
 
   // merkle tree for whitelisting
-  const buf2hex = (x) => "0x" + x.toString("hex");
-  const whitelistedAddresses = [deployer.address, user.address];
-  const leafNodes = whitelistedAddresses.map((addr) => keccak256(addr));
-  const merkleTree = new MerkleTree(leafNodes, keccak256, { sortPairs: true });
-  const rootHash = merkleTree.getRoot();
-  const deployerProof = merkleTree.getProof(leafNodes[0]).map((x) => buf2hex(x.data));
-  const userProof = merkleTree.getProof(leafNodes[1]).map((x) => buf2hex(x.data));
+  const merkleTree = await getMerkleTree();
+  const rootHash = merkleTree.getHexRoot();
+  const [deployerProof, userProof] = await getMerkleProofs();
+  const whitelist = await getMerkleWhitelist();
   const purchaseCap = ethers.utils.parseUnits("2000.0", 10);
 
   // token transfers
@@ -409,6 +406,7 @@ const createFixture = deployments.createFixture(async () => {
     deployerProof,
     userProof,
     purchaseCap,
+    whitelist
   };
 });
 
