@@ -34,10 +34,14 @@ contract NonFungibleOriginationPool is
     uint256 public maxMintablePerAddress;
     // max mintable nfts per whitelisted address
     uint256 public maxWhitelistMintable;
-    // the sale starting price (in purchase token amount) - [whitelistStartingPrice, publicStartingPrice]
-    uint256[] public startingPrices;
-    // the sale ending price (in purchase token amount) - [whitelistEndingPrice, publicEndingPrice]
-    uint256[] public endingPrices;
+    // the sale starting price (in purchase token)
+    uint256 public startingPrice;
+    // the sale ending price (in purchase token)
+    uint256 public endingPrice;
+    // the sale starting price for whitelisted addresses (in purchase token)
+    uint256 public whitelistStartingPrice;
+    // the sale ending price for whitelisted addresses (in purchase token)
+    uint256 public whitelistEndingPrice;
     // whitelist sale duration
     uint256 public whitelistSaleDuration;
     // public sale duration
@@ -101,8 +105,10 @@ contract NonFungibleOriginationPool is
         maxMintablePerAddress = _saleParams.maxMintablePerAddress;
         maxWhitelistMintable = _saleParams.maxWhitelistMintable;
 
-        startingPrices = _saleParams.startingPrices;
-        endingPrices = _saleParams.endingPrices;
+        startingPrice = _saleParams.startingPrice;
+        endingPrice = _saleParams.endingPrice;
+        whitelistStartingPrice = _saleParams.whitelistStartingPrice;
+        whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
         whitelistSaleDuration = _saleParams.whitelistSaleDuration;
         publicSaleDuration = _saleParams.publicSaleDuration;
@@ -185,7 +191,6 @@ contract NonFungibleOriginationPool is
      * @dev Admin function used to initiate the sale
      * @dev Function will transfer the total offer tokens from admin to contract
      */
-    // TODO: add manager functionality
     function initiateSale() external onlyOwnerOrManager {
         require(!saleInitiated, "Sale already initiated");
 
@@ -200,18 +205,22 @@ contract NonFungibleOriginationPool is
     // View Functions
     //--------------------------------------------------------------------------
 
-    function getCurrentMintPrice() public view returns (uint256) {
+    function getCurrentMintPrice() public view returns (uint256 mintPrice) {
         require(isWhitelistMintPeriod() || isPublicMintPeriod(), "Inactive sale");
         uint256 timeElapsed = block.timestamp - saleInitiatedTimestamp;
 
-        uint256 periodStartingPrice = isWhitelistMintPeriod() ? startingPrices[0] : startingPrices[1];
-        uint256 periodEndingPrice = isWhitelistMintPeriod() ? endingPrices[0] : endingPrices[1];
+        uint256 periodStartingPrice = isWhitelistMintPeriod() ? whitelistStartingPrice : startingPrice;
+        uint256 periodEndingPrice = isWhitelistMintPeriod() ? whitelistEndingPrice : endingPrice;
 
         uint256 saleRange = periodStartingPrice < periodEndingPrice
             ? periodEndingPrice - periodStartingPrice
             : periodStartingPrice - periodEndingPrice;
         uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) / timeElapsed;
         uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
+
+        mintPrice = periodStartingPrice < periodEndingPrice ?
+            periodStartingPrice + saleDelta :
+            periodStartingPrice - saleDelta;
     }
 
     function isWhitelistMintPeriod() public view returns (bool) {
@@ -221,9 +230,8 @@ contract NonFungibleOriginationPool is
     }
 
     function isPublicMintPeriod() public view returns (bool) {
-        uint256 blockTimestamp = block.timestamp;
-        uint256 endOfWhitelistPeriod = blockTimestamp + whitelistSaleDuration;
-        return blockTimestamp > endOfWhitelistPeriod && blockTimestamp <= (endOfWhitelistPeriod + publicSaleDuration);
+        uint256 endOfWhitelistPeriod = saleInitiatedTimestamp + whitelistSaleDuration;
+        return block.timestamp > endOfWhitelistPeriod && block.timestamp <= (endOfWhitelistPeriod + publicSaleDuration);
     }
 
     /**

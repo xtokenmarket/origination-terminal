@@ -19,10 +19,14 @@ interface INonFungibleOriginationPool {
         uint256 maxMintablePerAddress;
         // max supply reserved for minters during whitelist period
         uint256 maxWhitelistMintable;
-        // [whitelistStartingPrice, publicStartingPrice]
-        uint256[] startingPrices;
-        // [whitelistEndingPrice, publicEndingPrice]
-        uint256[] endingPrices;
+        // public sale starting price
+        uint256 startingPrice;
+        // public sale end price
+        uint256 endingPrice;
+        // whitelist sale starting price
+        uint256 whitelistStartingPrice;
+        // whitelist sale end price
+        uint256 whitelistEndingPrice;
         // the whitelist sale duration
         uint256 whitelistSaleDuration;
         // the public sale duration
