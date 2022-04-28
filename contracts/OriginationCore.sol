@@ -16,7 +16,6 @@ import "./interface/INonFungibleOriginationPool.sol";
 import "./interface/IxTokenManager.sol";
 import "./interface/INonFungibleToken.sol";
 
-// TODO: add dynamic deployment fee like we added for Mining
 contract OriginationCore is
     IOriginationCore,
     Initializable,
@@ -28,6 +27,9 @@ contract OriginationCore is
 
     // flat fee on deployment
     uint256 public listingFee;
+
+    mapping(address => uint256) public customListingFee; // Premium deployment fees for select partners
+    mapping(address => bool) public customListingFeeEnabled; // True if premium fee is enabled
 
     // percent fee share of purchases
     // 1e18 = 100% fee. 1e16 = 1% fee
@@ -105,7 +107,10 @@ contract OriginationCore is
     function createFungibleListing(
         IFungibleOriginationPool.SaleParams calldata saleParams
     ) external payable {
-        require(msg.value == listingFee, "Incorrect listing fee");
+        uint256 feeOwed = customListingFeeEnabled[msg.sender]
+            ? customListingFee[msg.sender]
+            : listingFee;
+        require(msg.value == feeOwed, "Incorrect listing fee");
         require(
             saleParams.offerToken != saleParams.purchaseToken,
             "Invalid offering"
@@ -148,7 +153,10 @@ contract OriginationCore is
     function createNonFungibleListing(
         INonFungibleOriginationPool.SaleParams calldata saleParams
     ) external payable {
-        require(msg.value == listingFee, "Incorrect listing fee");
+        uint256 feeOwed = customListingFeeEnabled[msg.sender]
+            ? customListingFee[msg.sender]
+            : listingFee;
+        require(msg.value == feeOwed, "Incorrect listing fee");
         require(
             saleParams.maxWhitelistMintable <= saleParams.maxTotalMintable,
             "Invalid mintable"
@@ -191,6 +199,31 @@ contract OriginationCore is
         listingFee = _listingFee;
 
         emit SetListingFee(_listingFee);
+    }
+
+    /**
+     * @notice Enable custom CLR pool deployment fee for a given address
+     * @param deployer address to enable fee for
+     * @param feeAmount fee amount in eth
+     */
+    function enableCustomListingFee(address deployer, uint256 feeAmount)
+        public
+        onlyOwner
+    {
+        require(
+            feeAmount < listingFee,
+            "Custom fee should be less than flat deployment fee"
+        );
+        customListingFeeEnabled[deployer] = true;
+        customListingFee[deployer] = feeAmount;
+    }
+
+    /**
+     * @notice Disable custom CLR pool deployment fee for a given address
+     * @param deployer address to disable fee for
+     */
+    function disableCustomListingFee(address deployer) public onlyOwner {
+        customListingFeeEnabled[deployer] = false;
     }
 
     /**

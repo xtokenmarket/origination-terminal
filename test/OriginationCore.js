@@ -80,6 +80,41 @@ describe("OriginationCore", async () => {
     expect(await originationCore.listingFee()).to.equal(newListingFee);
   });
 
+  it("should be able to set a custom listing fee for an address", async () => {
+    const customListingFee = ethers.utils.parseEther("0.002");
+    const address = user.address;
+    expect(await originationCore.customListingFeeEnabled(address)).to.equal(false);
+    expect(await originationCore.customListingFee(address)).to.not.equal(customListingFee);
+
+    await originationCore.enableCustomListingFee(address, customListingFee);
+    expect(await originationCore.customListingFeeEnabled(address)).to.equal(true);
+    expect(await originationCore.customListingFee(address)).to.equal(customListingFee);
+  });
+
+  it("should be able to disable a custom listing fee for an address", async () => {
+    const customListingFee = ethers.utils.parseEther("0.002");
+    const address = user.address;
+    expect(await originationCore.customListingFeeEnabled(address)).to.equal(false);
+    expect(await originationCore.customListingFee(address)).to.not.equal(customListingFee);
+
+    await originationCore.enableCustomListingFee(address, customListingFee);
+    expect(await originationCore.customListingFeeEnabled(address)).to.equal(true);
+    expect(await originationCore.customListingFee(address)).to.equal(customListingFee);
+
+    await originationCore.disableCustomListingFee(address);
+    expect(await originationCore.customListingFeeEnabled(address)).to.equal(false);
+  });
+
+  it("shouldn't be able to set a custom listing fee higher than the current listing fee for an address", async () => {
+    const customListingFee = ethers.utils.parseEther("0.02");
+    const address = user.address;
+    expect(await originationCore.customListingFeeEnabled(address)).to.equal(false);
+    expect(await originationCore.customListingFee(address)).to.not.equal(customListingFee);
+
+    await expect(originationCore.enableCustomListingFee(address, customListingFee)).
+      to.be.revertedWith('Custom fee should be less than flat deployment fee');
+  });
+
   it("should fail to create a listing with invalid params", async () => {
     const listingFee = await originationCore.listingFee();
     await expect(
