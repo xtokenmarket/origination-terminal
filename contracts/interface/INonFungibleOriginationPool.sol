@@ -19,6 +19,8 @@ interface INonFungibleOriginationPool {
         uint256 maxMintablePerAddress;
         // max supply reserved for minters during whitelist period
         uint256 maxWhitelistMintable;
+        // the token used to purchase the nfts (can be eth)
+        address purchaseToken;
         // public sale starting price
         uint256 startingPrice;
         // public sale end price

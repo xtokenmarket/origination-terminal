@@ -4,6 +4,8 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 import "./interface/INonFungibleOriginationPool.sol";
@@ -15,11 +17,14 @@ contract NonFungibleOriginationPool is
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
+    using SafeERC20 for IERC20;
     //--------------------------------------------------------------------------
     // Constants
     //--------------------------------------------------------------------------
     uint256 constant TIME_PRECISION = 1e10;
 
+    // the token used to purchase the offered token (can be eth)
+    IERC20 public purchaseToken;
     // address with manager capabilities
     address public manager;
     // the fee owed to the origination core when purchasing tokens (ex: 1e16 = 1% fee)
@@ -58,18 +63,31 @@ contract NonFungibleOriginationPool is
     // the timestamp of the end of the sale
     uint256 public saleEndTimestamp;
 
+    // individual address mint count
     mapping(address => uint256) userMints;
 
     // total mint count
     uint256 public totalMints;
     // whitelist mint count
     uint256 public whitelistMints;
+    // the total amount of purchase tokens acquired
+    uint256 public purchaseTokensAcquired;
+    // the total amount of origination fees
+    uint256 public originationCoreFees;
+    // true if the sponsor has claimed purchase tokens / remaining offer tokens at conclusion of sale, false otherwise
+    bool public sponsorTokensClaimed;
 
     //--------------------------------------------------------------------------
     // Events
     //--------------------------------------------------------------------------
 
     event InitiateSale(uint256 saleInitiatedTimestamp);
+    event Minted(
+        address indexed minter,
+        uint256 nftAmount,
+        uint256 tokenAmountSent
+    );
+    event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
 
     //--------------------------------------------------------------------------
     // Modifiers
@@ -95,6 +113,8 @@ contract NonFungibleOriginationPool is
     ) external override initializer {
         __Ownable_init();
         __ReentrancyGuard_init_unchained();
+
+        purchaseToken = IERC20(_saleParams.purchaseToken);
 
         originationFee = _originationFee;
         originationCore = _originationCore;
@@ -127,14 +147,27 @@ contract NonFungibleOriginationPool is
      * @param _quantityToMint Number of NFTs to mint
      * @param _merkleProof The merkle proof associated with msg.sender to prove whitelisted
      */
-    function whitelistMint(uint256 _quantityToMint, bytes32[] calldata _merkleProof) external payable {
+    function whitelistMint(
+        uint256 _quantityToMint,
+        bytes32[] calldata _merkleProof
+    ) external payable {
         require(isWhitelistMintPeriod(), "Not whitelist period");
 
         address sender = msg.sender;
         bytes32 leaf = keccak256(abi.encodePacked(sender));
-        require(MerkleProof.verify(_merkleProof, whitelist.whitelistMerkleRoot, leaf), "Address not whitelisted");
+        require(
+            MerkleProof.verify(
+                _merkleProof,
+                whitelist.whitelistMerkleRoot,
+                leaf
+            ),
+            "Address not whitelisted"
+        );
 
-        require(whitelistMints + _quantityToMint <= maxWhitelistMintable, "Exceeds whitelist supply");
+        require(
+            whitelistMints + _quantityToMint <= maxWhitelistMintable,
+            "Exceeds whitelist supply"
+        );
         whitelistMints += _quantityToMint;
 
         _mint(_quantityToMint, sender);
@@ -146,30 +179,55 @@ contract NonFungibleOriginationPool is
         _mint(_quantityToMint, msg.sender);
     }
 
-    // TODO: make compatible with erc20 payment too
-    function _mint(uint256 _quantityToMint, address _minter) private nonReentrant {
+    function _mint(uint256 _quantityToMint, address _minter)
+        private
+        nonReentrant
+    {
         require(saleInitiated, "Sale not initiated");
 
-        require(userMints[_minter] + _quantityToMint <= maxMintablePerAddress, "User mint cap reached");
+        require(
+            userMints[_minter] + _quantityToMint <= maxMintablePerAddress,
+            "User mint cap reached"
+        );
         userMints[_minter] += _quantityToMint;
 
-        require(totalMints + _quantityToMint <= maxTotalMintable, "Total mint cap reached");
+        require(
+            totalMints + _quantityToMint <= maxTotalMintable,
+            "Total mint cap reached"
+        );
         totalMints += _quantityToMint;
 
         // calc price, return some eth if necessary
-        // (in the case of ascending price auction, FE should send a little bit too much ETH to ensure tx succeeds)
-        // problem above will not be an issue with erc20 payment
+        // (in the case of ascending price auction, FE should send a little bit more ETH to ensure tx succeeds)
         uint256 currentMintPrice = getCurrentMintPrice();
-        uint256 ethOwable = _quantityToMint * currentMintPrice;
-        require(msg.value >= ethOwable, "Insufficient payment");
+        uint256 totalCost = _quantityToMint * currentMintPrice;
+        uint256 fee = (totalCost * originationFee) / 1e18;
 
-        uint256 amountToReturn = msg.value - ethOwable;
-        if (amountToReturn > 0) {
-            (bool success, ) = payable(_minter).call{ value: amountToReturn }("");
-            require(success);
+        // Send eth/erc-20 from minter to contract
+        if (address(purchaseToken) == address(0)) {
+            // purchase token is eth
+            require(msg.value >= totalCost, "Insufficient payment");
+            // return eth in case user has sent more
+            uint256 amountToReturn = msg.value - totalCost;
+            if (amountToReturn > 0) {
+                (bool success, ) = payable(_minter).call{value: amountToReturn}(
+                    ""
+                );
+                require(success);
+            }
+        } else {
+            // if purchase token is an erc-20
+            purchaseToken.safeTransferFrom(_minter, address(this), totalCost);
         }
 
+        // update sale trackers
+        purchaseTokensAcquired += totalCost;
+        originationCoreFees += fee;
+
+        // mint nft to user
         nft.mintTo(_minter, _quantityToMint);
+
+        emit Minted(_minter, _quantityToMint, totalCost);
     }
 
     //--------------------------------------------------------------------------
@@ -181,7 +239,10 @@ contract NonFungibleOriginationPool is
      *
      * @param _whitelist The whitelist
      */
-    function setWhitelist(Whitelist calldata _whitelist) external onlyOwnerOrManager {
+    function setWhitelist(Whitelist calldata _whitelist)
+        external
+        onlyOwnerOrManager
+    {
         require(!saleInitiated, "Cannot set whitelist after sale initiated");
 
         whitelist = _whitelist;
@@ -201,26 +262,71 @@ contract NonFungibleOriginationPool is
         emit InitiateSale(saleInitiatedTimestamp);
     }
 
+    /**
+     * @dev Admin function to claim the purchase tokens from the sale
+     * @dev Can only claim at the conclusion of the sale
+     * @dev Returns unsold offer tokens or all offer tokens if reserve amount was not met
+     */
+    function claimPurchaseToken() external onlyOwnerOrManager {
+        require(
+            block.timestamp > saleEndTimestamp ||
+                totalMints == maxTotalMintable,
+            "Sale has not ended"
+        );
+        require(!sponsorTokensClaimed, "Tokens already claimed");
+        sponsorTokensClaimed = true;
+
+        uint256 claimAmount;
+        if (address(purchaseToken) == address(0)) {
+            // purchaseToken = eth
+            claimAmount = address(this).balance - originationCoreFees;
+            (bool success, ) = owner().call{value: claimAmount}("");
+            require(success);
+            // send fees to core
+            originationCore.receiveFees{value: originationCoreFees}();
+            require(success);
+        } else {
+            claimAmount =
+                purchaseToken.balanceOf(address(this)) -
+                originationCoreFees;
+            purchaseToken.safeTransfer(owner(), claimAmount);
+            purchaseToken.safeTransfer(
+                address(originationCore),
+                originationCoreFees
+            );
+        }
+
+        emit PurchaseTokenClaim(owner(), claimAmount);
+    }
+
     //--------------------------------------------------------------------------
     // View Functions
     //--------------------------------------------------------------------------
 
     function getCurrentMintPrice() public view returns (uint256 mintPrice) {
-        require(isWhitelistMintPeriod() || isPublicMintPeriod(), "Inactive sale");
+        require(
+            isWhitelistMintPeriod() || isPublicMintPeriod(),
+            "Inactive sale"
+        );
         uint256 timeElapsed = block.timestamp - saleInitiatedTimestamp;
 
-        uint256 periodStartingPrice = isWhitelistMintPeriod() ? whitelistStartingPrice : startingPrice;
-        uint256 periodEndingPrice = isWhitelistMintPeriod() ? whitelistEndingPrice : endingPrice;
+        uint256 periodStartingPrice = isWhitelistMintPeriod()
+            ? whitelistStartingPrice
+            : startingPrice;
+        uint256 periodEndingPrice = isWhitelistMintPeriod()
+            ? whitelistEndingPrice
+            : endingPrice;
 
         uint256 saleRange = periodStartingPrice < periodEndingPrice
             ? periodEndingPrice - periodStartingPrice
             : periodStartingPrice - periodEndingPrice;
-        uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) / timeElapsed;
+        uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) /
+            timeElapsed;
         uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
 
-        mintPrice = periodStartingPrice < periodEndingPrice ?
-            periodStartingPrice + saleDelta :
-            periodStartingPrice - saleDelta;
+        mintPrice = periodStartingPrice < periodEndingPrice
+            ? periodStartingPrice + saleDelta
+            : periodStartingPrice - saleDelta;
     }
 
     function isWhitelistMintPeriod() public view returns (bool) {
@@ -230,8 +336,11 @@ contract NonFungibleOriginationPool is
     }
 
     function isPublicMintPeriod() public view returns (bool) {
-        uint256 endOfWhitelistPeriod = saleInitiatedTimestamp + whitelistSaleDuration;
-        return block.timestamp > endOfWhitelistPeriod && block.timestamp <= (endOfWhitelistPeriod + publicSaleDuration);
+        uint256 endOfWhitelistPeriod = saleInitiatedTimestamp +
+            whitelistSaleDuration;
+        return
+            block.timestamp > endOfWhitelistPeriod &&
+            block.timestamp <= (endOfWhitelistPeriod + publicSaleDuration);
     }
 
     /**
