@@ -72,7 +72,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should successfully make a purchase", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -102,7 +102,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should fail to claim tokens twice", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -128,7 +128,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should successfully purchase when purchase decimals are less than offer decimals", async () => {
       // disable whitelist
-      await originationPoolDecimals.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolDecimals.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseUnits("1", 6);
@@ -183,6 +183,16 @@ describe("FungibleOriginationPool", async () => {
       expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter.add(amountIn));
     });
 
+    it("shouldn't be able to purchase above the contribution limit from a whitelisted address", async () => {
+      await originationPoolWhitelist.initiateSale();
+
+      let contributionLimit = whitelist[user.address];
+
+      await originationPoolWhitelist.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit);
+      await expect(originationPoolWhitelist.connect(user).whitelistPurchase(userProof, 1, contributionLimit)).
+        to.be.revertedWith('User has reached his max contribution amount');
+    });
+
     it("should fail to purchase if not whitelisted", async () => {
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -205,7 +215,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should fail to claim tokens if sale has not ended", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("0.5");
@@ -220,7 +230,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should return purchase tokens if sale reserve amount was not met", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will not receive any offer tokes
       const amountIn = ethers.utils.parseEther("0.5");
@@ -250,7 +260,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should refund sender if purchase amount exceeds total sale offering", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -282,7 +292,7 @@ describe("FungibleOriginationPool", async () => {
     it(`should refund sender if purchase amount exceeds total sale offering 
               for pools with purchase decimals < offer decimals`, async () => {
       // disable whitelist
-      await originationPoolDecimals.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolDecimals.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -313,7 +323,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should end sale if offer token amount is reached", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -339,7 +349,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim tokens if offer token amount is reached", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -386,7 +396,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should not be able to claim purchase tokens before sale end", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("0.5");
@@ -401,7 +411,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should not be able to claim purchase tokens if the sale reserve amount was not met", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will not receive any offer tokes
       const amountIn = ethers.utils.parseEther("0.5");
@@ -421,7 +431,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim purchase tokens if the sale has ended succesfully", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
       const offeringAmount = await originationPool.totalOfferingAmount();
 
       // you will receive 10x the amount you put in
@@ -447,7 +457,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim purchase tokens if offer token amount is reached", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
       const offeringAmount = await originationPool.totalOfferingAmount();
 
       // initiate sale
@@ -475,7 +485,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should not be able to claim tokens twice", async () => {
       // disable whitelist
-      await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -492,7 +502,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim ETH purchase tokens if the sale has ended successfully", async () => {
       // disable whitelist
-      await originationPoolETH.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolETH.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -529,7 +539,7 @@ describe("FungibleOriginationPool", async () => {
     it("should not be able to set whitelist after sale initiated", async () => {
       await originationPool.initiateSale();
 
-      await expect(originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0])).to.be.revertedWith(
+      await expect(originationPool.setWhitelist(ethers.utils.formatBytes32String("0"))).to.be.revertedWith(
         "Cannot set whitelist after sale initiated"
       );
     });
@@ -541,6 +551,7 @@ describe("FungibleOriginationPool", async () => {
         accounts,
         originationCore,
         originationPoolETH,
+        originationPoolETHWhitelist,
         purchaseToken,
         offerToken,
         rootHash,
@@ -569,7 +580,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should successfully make a purchase", async () => {
       // disable whitelist
-      await originationPoolETH.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolETH.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -618,6 +629,16 @@ describe("FungibleOriginationPool", async () => {
       expect(offerBalanceAfter).to.equal(expectedAmountOut);
     });
 
+    it("shouldn't be able to purchase above the contribution limit from a whitelisted address", async () => {
+      await originationPoolETHWhitelist.initiateSale();
+
+      let contributionLimit = whitelist[user.address];
+
+      await originationPoolETHWhitelist.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit, { value: contributionLimit })
+      await expect(originationPoolETHWhitelist.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit, { value: 1 })).
+        to.be.revertedWith('User has reached his max contribution amount');
+    });
+
     it("should fail to purchase if not on the whitelist", async () => {
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -639,7 +660,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should return ETH purchase tokens if sale did not reach reserve amount", async () => {
       // disable whitelist
-      await originationPoolETH.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolETH.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will not receive any offer tokes
       const amountIn = ethers.utils.parseEther("0.5");
@@ -665,7 +686,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should refund sender if purchase amount exceeds total sale offering", async () => {
       // disable whitelist
-      await originationPoolETH.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolETH.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -693,7 +714,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim offer tokens if total offering amount is reached", async () => {
       // disable whitelist
-      await originationPoolETH.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolETH.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -740,7 +761,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should successfully purchase tokens", async () => {
       // disable whitelist
-      await originationPoolAscending.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolAscending.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -792,7 +813,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should successfully purchase tokens", async () => {
       // disable whitelist
-      await originationPoolDescending.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolDescending.setWhitelist(ethers.utils.formatBytes32String("0"));
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -1017,7 +1038,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim proportional amount of vested tokens after cliff if offer token amount is reached", async () => {
       // disable whitelist
-      await originationPoolVesting.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolVesting.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale
@@ -1053,7 +1074,7 @@ describe("FungibleOriginationPool", async () => {
 
     it("should be able to claim full amount of vested tokens after vesting if offer token amount is reached", async () => {
       // disable whitelist
-      await originationPoolVesting.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+      await originationPoolVesting.setWhitelist(ethers.utils.formatBytes32String("0"));
       const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
 
       // initiate sale

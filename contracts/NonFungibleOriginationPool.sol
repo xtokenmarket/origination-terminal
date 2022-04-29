@@ -53,8 +53,8 @@ contract NonFungibleOriginationPool is
     uint256 public publicSaleDuration;
     // total sale duration (in seconds)
     uint256 public saleDuration;
-    // the whitelist data
-    Whitelist public whitelist;
+    // the whitelist merkle root - used to verify whitelist proofs
+    bytes32 public whitelistMerkleRoot;
 
     // true if sale has started, false otherwise
     bool public saleInitiated;
@@ -156,11 +156,7 @@ contract NonFungibleOriginationPool is
         address sender = msg.sender;
         bytes32 leaf = keccak256(abi.encodePacked(sender));
         require(
-            MerkleProof.verify(
-                _merkleProof,
-                whitelist.whitelistMerkleRoot,
-                leaf
-            ),
+            MerkleProof.verify(_merkleProof, whitelistMerkleRoot, leaf),
             "Address not whitelisted"
         );
 
@@ -237,15 +233,15 @@ contract NonFungibleOriginationPool is
     /**
      * @dev Admin function to set a whitelist
      *
-     * @param _whitelist The whitelist
+     * @param _whitelistMerkleRoot The whitelist merkle root
      */
-    function setWhitelist(Whitelist calldata _whitelist)
+    function setWhitelist(bytes32 _whitelistMerkleRoot)
         external
         onlyOwnerOrManager
     {
         require(!saleInitiated, "Cannot set whitelist after sale initiated");
 
-        whitelist = _whitelist;
+        whitelistMerkleRoot = _whitelistMerkleRoot;
     }
 
     /**

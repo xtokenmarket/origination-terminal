@@ -4,12 +4,6 @@ pragma solidity 0.8.4;
 import "./IOriginationCore.sol";
 
 interface IFungibleOriginationPool {
-    struct Whitelist {
-        bool enabled; // if disabled, the merkle root and purchase cap values are ignored
-        bytes32 whitelistMerkleRoot; // the merkle root used to determine if an address is whitelisted
-        uint256 purchaseCap; // the max amount of tokens an address can purchase
-    }
-
     struct SaleParams {
         address offerToken; // the token being offered for sale
         address purchaseToken; // the token used to purchase the offered token

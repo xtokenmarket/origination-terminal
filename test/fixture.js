@@ -90,7 +90,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPool = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPool.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPool.setWhitelist(rootHash);
 
   // token approvals
   await purchaseToken.approve(originationPool.address, ethers.utils.parseEther("10000000000"));
@@ -125,7 +125,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolETH = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolETH.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPoolETH.setWhitelist(rootHash);
 
   // token approvals
   await offerToken.approve(originationPoolETH.address, ethers.utils.parseUnits("1000000", 10));
@@ -160,7 +160,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolDecimals = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolDecimals.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPoolDecimals.setWhitelist(rootHash);
 
   // token approvals
   await purchaseTokenDecimalsLower.approve(originationPoolDecimals.address, ethers.utils.parseEther("10000000000"));
@@ -197,7 +197,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolAscending = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolAscending.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPoolAscending.setWhitelist(rootHash);
 
   // token approvals
   await purchaseToken.approve(originationPoolAscending.address, ethers.utils.parseEther("10000000000"));
@@ -232,7 +232,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolDescending = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolDescending.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPoolDescending.setWhitelist(rootHash);
 
   // token approvals
   await purchaseToken.approve(originationPoolDescending.address, ethers.utils.parseEther("10000000000"));
@@ -267,7 +267,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolVesting = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolVesting.setWhitelist([false, rootHash, purchaseCap]);
+  await originationPoolVesting.setWhitelist(rootHash);
 
   // token approvals
   await purchaseToken.approve(originationPoolVesting.address, ethers.utils.parseEther("10000000000"));
@@ -302,7 +302,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolVestingDecimals = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolVestingDecimals.setWhitelist([false, rootHash, purchaseCap]);
+  await originationPoolVestingDecimals.setWhitelist(rootHash);
 
   // token approvals
   await purchaseTokenDecimalsLower.approve(
@@ -345,7 +345,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolWhitelist = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolWhitelist.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPoolWhitelist.setWhitelist(rootHash);
 
   // token approvals
   await purchaseToken.approve(originationPoolWhitelist.address, ethers.utils.parseEther("10000000000"));
@@ -380,7 +380,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // get origination pool contract
   const originationPoolETHWhitelist = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
-  await originationPoolETHWhitelist.setWhitelist([true, rootHash, purchaseCap]);
+  await originationPoolETHWhitelist.setWhitelist(rootHash);
 
   // token approvals
   await offerToken.approve(originationPoolETHWhitelist.address, ethers.utils.parseUnits("1000000", 10));

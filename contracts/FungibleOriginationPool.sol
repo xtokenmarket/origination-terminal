@@ -62,8 +62,8 @@ contract FungibleOriginationPool is
     uint256 public vestingPeriod;
     // the vesting cliff period (must be <= vesting period)
     uint256 public cliffPeriod;
-    // the whitelist data
-    Whitelist public whitelist;
+    // the whitelist merkle root - used to verify whitelist proofs
+    bytes32 public whitelistMerkleRoot;
 
     // the fee owed to the origination core when purchasing tokens (ex: 1e16 = 1% fee)
     uint256 public originationFee;
@@ -216,7 +216,6 @@ contract FungibleOriginationPool is
         uint256 contributionAmount,
         uint256 maxContributionAmount
     ) external payable {
-        require(whitelist.enabled, "Whitelist not enabled");
         require(isWhitelistMintPeriod(), "Not whitelist period");
         bytes32 leaf = keccak256(
             abi.encodePacked(msg.sender, maxContributionAmount)
@@ -224,11 +223,7 @@ contract FungibleOriginationPool is
         // Verify address is whitelisted
         // Requires address and max contribution amount for that address
         require(
-            MerkleProof.verify(
-                merkleProof,
-                whitelist.whitelistMerkleRoot,
-                leaf
-            ),
+            MerkleProof.verify(merkleProof, whitelistMerkleRoot, leaf),
             "Address not whitelisted"
         );
         // If contribution amount is exceeded invest as much as possible
@@ -321,13 +316,6 @@ contract FungibleOriginationPool is
         require(
             offerTokenAmountSold <= totalOfferingAmount,
             "Sale amount greater than offering"
-        );
-
-        // If sale is whitelisted, check to ensure purchase cap is not exceeded
-        require(
-            !whitelist.enabled ||
-                offerTokenAmountPurchased[sender] <= whitelist.purchaseCap,
-            "Must not exceed purchase cap"
         );
 
         if (vestingPeriod > 0) {
@@ -674,15 +662,15 @@ contract FungibleOriginationPool is
     /**
      * @dev Admin function to set a whitelist
      *
-     * @param _whitelist The whitelist
+     * @param _whitelistMerkleRoot The whitelist merkle root
      */
-    function setWhitelist(Whitelist calldata _whitelist)
+    function setWhitelist(bytes32 _whitelistMerkleRoot)
         external
         onlyOwnerOrManager
     {
         require(!saleInitiated, "Cannot set whitelist after sale initiated");
 
-        whitelist = _whitelist;
+        whitelistMerkleRoot = _whitelistMerkleRoot;
     }
 
     /**

@@ -50,7 +50,7 @@ describe("OriginationCore", async () => {
   it("should successfully claim fees as revenue controller", async () => {
     // purchase tokens
     // disable whitelist
-    await originationPool.setWhitelist([false, ethers.utils.formatBytes32String("0"), 0]);
+    await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
     // initiate sale
     await originationPool.initiateSale();
     await originationPool.purchase(ethers.utils.parseEther("1"));

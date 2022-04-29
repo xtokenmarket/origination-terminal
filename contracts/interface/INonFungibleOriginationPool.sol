@@ -4,12 +4,6 @@ pragma solidity 0.8.4;
 import "./IOriginationCore.sol";
 
 interface INonFungibleOriginationPool {
-    struct Whitelist {
-        bool enabled; // if disabled, the merkle root and purchase cap values are ignored
-        bytes32 whitelistMerkleRoot; // the merkle root used to determine if an address is whitelisted
-        uint256 purchaseCap; // the max amount of tokens an address can purchase
-    }
-
     struct SaleParams {
         // the 721 NFT contract to mint
         address collection;
