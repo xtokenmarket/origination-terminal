@@ -765,10 +765,10 @@ describe("FungibleOriginationPool", async () => {
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
-      const startingPrice = await originationPoolAscending.startingPrice();
-      const endingPrice = await originationPoolAscending.endingPrice();
-      const saleDelta = endingPrice.sub(startingPrice).div(2);
-      const expectedTokenPrice = startingPrice.add(saleDelta); // half way through sale period
+      const publicStartingPrice = await originationPoolAscending.publicStartingPrice();
+      const publicEndingPrice = await originationPoolAscending.publicEndingPrice();
+      const saleDelta = publicEndingPrice.sub(publicStartingPrice).div(2);
+      const expectedTokenPrice = publicStartingPrice.add(saleDelta); // half way through sale period
       const expectedAmountOut = amountIn.mul(1e10).div(expectedTokenPrice);
 
       await originationPoolAscending.initiateSale();
@@ -817,10 +817,10 @@ describe("FungibleOriginationPool", async () => {
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
-      const startingPrice = await originationPoolDescending.startingPrice();
-      const endingPrice = await originationPoolDescending.endingPrice();
-      const saleDelta = startingPrice.sub(endingPrice).div(2);
-      const expectedTokenPrice = startingPrice.sub(saleDelta); // half way through sale period
+      const publicStartingPrice = await originationPoolDescending.publicStartingPrice();
+      const publicEndingPrice = await originationPoolDescending.publicEndingPrice();
+      const saleDelta = publicStartingPrice.sub(publicEndingPrice).div(2);
+      const expectedTokenPrice = publicStartingPrice.sub(saleDelta); // half way through sale period
       const expectedAmountOut = amountIn.mul(1e10).div(expectedTokenPrice);
 
       await originationPoolDescending.initiateSale();

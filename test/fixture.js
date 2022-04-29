@@ -69,8 +69,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseToken.address,
-      startingPrice: offerPricePerPurchaseToken, // starting price
-      endingPrice: offerPricePerPurchaseToken, // ending price
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -104,8 +104,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: ethers.constants.AddressZero,
-      startingPrice: offerPricePerPurchaseToken, // starting price
-      endingPrice: offerPricePerPurchaseToken, // ending price
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -139,8 +139,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseTokenDecimalsLower.address,
-      startingPrice: lowerDecimalsPurchasePrice, // starting price
-      endingPrice: lowerDecimalsPurchasePrice, // ending price
+      publicStartingPrice: lowerDecimalsPurchasePrice, // starting price
+      publicEndingPrice: lowerDecimalsPurchasePrice, // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -176,8 +176,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseToken.address,
-      startingPrice: offerPricePerPurchaseToken, // starting price
-      endingPrice: offerPricePerPurchaseToken.mul(4), // ending price
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken.mul(4), // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -211,8 +211,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseToken.address,
-      startingPrice: offerPricePerPurchaseToken.mul(4), // starting price
-      endingPrice: offerPricePerPurchaseToken, // ending price
+      publicStartingPrice: offerPricePerPurchaseToken.mul(4), // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -246,8 +246,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseToken.address,
-      startingPrice: offerPricePerPurchaseToken, // starting price
-      endingPrice: offerPricePerPurchaseToken, // ending price
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -281,8 +281,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseTokenDecimalsLower.address,
-      startingPrice: lowerDecimalsPurchasePrice, // starting price
-      endingPrice: lowerDecimalsPurchasePrice, // ending price
+      publicStartingPrice: lowerDecimalsPurchasePrice, // starting price
+      publicEndingPrice: lowerDecimalsPurchasePrice, // ending price
       whitelistStartingPrice: 0,
       whitelistEndingPrice: 0,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -324,8 +324,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: purchaseToken.address,
-      startingPrice: offerPricePerPurchaseToken, // starting price
-      endingPrice: offerPricePerPurchaseToken, // ending price
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
       whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
       publicSaleDuration: 86400, // duration of 24 hours
@@ -359,8 +359,8 @@ const createFixture = deployments.createFixture(async () => {
     {
       offerToken: offerToken.address,
       purchaseToken: ethers.constants.AddressZero,
-      startingPrice: offerPricePerPurchaseToken, // starting price
-      endingPrice: offerPricePerPurchaseToken, // ending price
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
       whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
       publicSaleDuration: 86400, // duration of 24 hours

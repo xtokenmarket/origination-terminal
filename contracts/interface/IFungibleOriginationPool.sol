@@ -7,8 +7,8 @@ interface IFungibleOriginationPool {
     struct SaleParams {
         address offerToken; // the token being offered for sale
         address purchaseToken; // the token used to purchase the offered token
-        uint256 startingPrice; // in purchase tokens
-        uint256 endingPrice; // in purchase tokens
+        uint256 publicStartingPrice; // in purchase tokens
+        uint256 publicEndingPrice; // in purchase tokens
         uint256 whitelistStartingPrice; // in purchase tokens
         uint256 whitelistEndingPrice; // in purchase tokens
         uint256 publicSaleDuration; // the public sale duration

@@ -122,8 +122,8 @@ describe("OriginationCore", async () => {
         {
           offerToken: offerToken.address,
           purchaseToken: purchaseToken.address,
-          startingPrice: 0, // starting price
-          endingPrice: 0, // ending price
+          publicStartingPrice: 0, // starting price
+          publicEndingPrice: 0, // ending price
           whitelistStartingPrice: 0,
           whitelistEndingPrice: 0,
           publicSaleDuration: 3024000, // duration greater than 4 weeks

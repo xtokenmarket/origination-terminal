@@ -124,8 +124,11 @@ contract OriginationCore is
         address originationPool = poolDeployer.deployFungibleOriginationPool(
             address(proxyAdmin)
         );
-        // Deploy the vesting entry nft
-        address vestingEntryNFT = nftDeployer.deployVestingEntryNFT();
+        // Deploy the vesting entry nft if there is a vesting period
+        address vestingEntryNFT = address(0);
+        if (saleParams.vestingPeriod > 0) {
+            vestingEntryNFT = nftDeployer.deployVestingEntryNFT();
+        }
 
         // Set proxy admin
         proxyAdmin.addProxyAdmin(originationPool, msg.sender);

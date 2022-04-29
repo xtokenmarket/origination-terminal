@@ -43,9 +43,9 @@ contract FungibleOriginationPool is
 
     // Token sale params
     // the sale starting price (in purchase token)
-    uint256 public startingPrice;
+    uint256 public publicStartingPrice;
     // the sale ending price (in purchase token)
-    uint256 public endingPrice;
+    uint256 public publicEndingPrice;
     // the sale starting price for whitelisted addresses (in purchase token)
     uint256 public whitelistStartingPrice;
     // the sale ending price for whitelisted addresses (in purchase token)
@@ -83,8 +83,8 @@ contract FungibleOriginationPool is
     // sale can end if all offer tokens are purchased
     uint256 public saleEndTimestamp;
 
-    // the amount of offer tokens vested
-    uint256 public amountVested;
+    // the amount of offer tokens which are reserved for vesting
+    uint256 public vestableTokenAmount;
     // id to keep track of vesting positions
     uint256 public vestingID;
 
@@ -169,8 +169,8 @@ contract FungibleOriginationPool is
             ? 10**18
             : 10**purchaseToken.decimals();
 
-        startingPrice = _saleParams.startingPrice;
-        endingPrice = _saleParams.endingPrice;
+        publicStartingPrice = _saleParams.publicStartingPrice;
+        publicEndingPrice = _saleParams.publicEndingPrice;
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
@@ -192,8 +192,10 @@ contract FungibleOriginationPool is
         originationFee = _originationFee;
         originationCore = _originationCore;
 
-        vestingEntryNFT = VestingEntryNFT(_vestingEntryNFT);
-        vestingEntryNFT.initialize("VestingNFT", "VNFT", address(this));
+        if (_vestingEntryNFT != address(0)) {
+            vestingEntryNFT = VestingEntryNFT(_vestingEntryNFT);
+            vestingEntryNFT.initialize("VestingNFT", "VNFT", address(this));
+        }
 
         _transferOwnership(_admin);
     }
@@ -355,7 +357,7 @@ contract FungibleOriginationPool is
         emit CreateVestingEntry(_sender, vestingID, _offerTokenAmount);
         vestingID++;
 
-        amountVested += _offerTokenAmount;
+        vestableTokenAmount += _offerTokenAmount;
     }
 
     /**
@@ -400,7 +402,7 @@ contract FungibleOriginationPool is
                 );
 
                 offerToken.safeTransfer(msg.sender, offerTokenPayout);
-                amountVested -= offerTokenPayout;
+                vestableTokenAmount -= offerTokenPayout;
 
                 emit ClaimVested(
                     msg.sender,
@@ -524,10 +526,10 @@ contract FungibleOriginationPool is
         // Whitelist mint period has different start and end prices
         uint256 _startingPrice = isWhitelistMintPeriod()
             ? whitelistStartingPrice
-            : startingPrice;
+            : publicStartingPrice;
         uint256 _endingPrice = isWhitelistMintPeriod()
             ? whitelistEndingPrice
-            : endingPrice;
+            : publicEndingPrice;
         // Get the start / end price difference
         uint256 saleRange = _startingPrice < _endingPrice
             ? _endingPrice - _startingPrice

@@ -35,14 +35,14 @@ contract NonFungibleOriginationPool is
     INonFungibleToken public nft;
     // max total mintable supply
     uint256 public maxTotalMintable;
-    // max mintable nfts per address
-    uint256 public maxMintablePerAddress;
-    // max mintable nfts per whitelisted address
+    // max mintable nfts for the whitelist
     uint256 public maxWhitelistMintable;
+    // max mintable nfts per whitelisted address
+    uint256 public maxMintablePerWhitelistedAddress;
     // the sale starting price (in purchase token)
-    uint256 public startingPrice;
+    uint256 public publicStartingPrice;
     // the sale ending price (in purchase token)
-    uint256 public endingPrice;
+    uint256 public publicEndingPrice;
     // the sale starting price for whitelisted addresses (in purchase token)
     uint256 public whitelistStartingPrice;
     // the sale ending price for whitelisted addresses (in purchase token)
@@ -122,11 +122,12 @@ contract NonFungibleOriginationPool is
         nft = INonFungibleToken(_saleParams.collection);
 
         maxTotalMintable = _saleParams.maxTotalMintable;
-        maxMintablePerAddress = _saleParams.maxMintablePerAddress;
+        maxMintablePerWhitelistedAddress = _saleParams
+            .maxMintablePerWhitelistedAddress;
         maxWhitelistMintable = _saleParams.maxWhitelistMintable;
 
-        startingPrice = _saleParams.startingPrice;
-        endingPrice = _saleParams.endingPrice;
+        publicStartingPrice = _saleParams.publicStartingPrice;
+        publicEndingPrice = _saleParams.publicEndingPrice;
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
@@ -159,6 +160,11 @@ contract NonFungibleOriginationPool is
             MerkleProof.verify(_merkleProof, whitelistMerkleRoot, leaf),
             "Address not whitelisted"
         );
+        require(
+            userMints[sender] + _quantityToMint <=
+                maxMintablePerWhitelistedAddress,
+            "User mint cap reached"
+        );
 
         require(
             whitelistMints + _quantityToMint <= maxWhitelistMintable,
@@ -180,11 +186,6 @@ contract NonFungibleOriginationPool is
         nonReentrant
     {
         require(saleInitiated, "Sale not initiated");
-
-        require(
-            userMints[_minter] + _quantityToMint <= maxMintablePerAddress,
-            "User mint cap reached"
-        );
         userMints[_minter] += _quantityToMint;
 
         require(
@@ -261,7 +262,6 @@ contract NonFungibleOriginationPool is
     /**
      * @dev Admin function to claim the purchase tokens from the sale
      * @dev Can only claim at the conclusion of the sale
-     * @dev Returns unsold offer tokens or all offer tokens if reserve amount was not met
      */
     function claimPurchaseToken() external onlyOwnerOrManager {
         require(
@@ -308,10 +308,10 @@ contract NonFungibleOriginationPool is
 
         uint256 periodStartingPrice = isWhitelistMintPeriod()
             ? whitelistStartingPrice
-            : startingPrice;
+            : publicStartingPrice;
         uint256 periodEndingPrice = isWhitelistMintPeriod()
             ? whitelistEndingPrice
-            : endingPrice;
+            : publicEndingPrice;
 
         uint256 saleRange = periodStartingPrice < periodEndingPrice
             ? periodEndingPrice - periodStartingPrice
