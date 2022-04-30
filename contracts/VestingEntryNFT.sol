@@ -60,7 +60,7 @@ contract VestingEntryNFT is ERC721Upgradeable, IVestingEntryNFT {
     }
 
     modifier onlyPool() {
-        require(msg.sender == pool);
+        require(msg.sender == pool, "Only pool can interact with vesting entries");
         _;
     }
 }

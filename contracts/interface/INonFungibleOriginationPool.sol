@@ -9,10 +9,10 @@ interface INonFungibleOriginationPool {
         address collection;
         // max supply mintable via Origination (maxWhitelistMint + implicit public sale mint)
         uint256 maxTotalMintable;
-        // maximum a whitelisted address can mint
-        uint256 maxMintablePerWhitelistedAddress;
         // max supply reserved for minters during whitelist period
         uint256 maxWhitelistMintable;
+        // maximum a whitelisted address can mint
+        uint256 maxMintablePerWhitelistedAddress;
         // the token used to purchase the nfts (can be eth)
         address purchaseToken;
         // public sale starting price

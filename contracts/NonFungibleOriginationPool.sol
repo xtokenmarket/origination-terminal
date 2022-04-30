@@ -11,6 +11,11 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./interface/INonFungibleOriginationPool.sol";
 import "./interface/INonFungibleToken.sol";
 
+/**
+ * Origination pool representing a nonfungible token sale
+ * Users buy a NFT tokens using ETH or other ERC-20 token
+ * Users receive their NFT tokens at purchase time
+ */
 contract NonFungibleOriginationPool is
     INonFungibleOriginationPool,
     Initializable,
@@ -74,7 +79,7 @@ contract NonFungibleOriginationPool is
     uint256 public purchaseTokensAcquired;
     // the total amount of origination fees
     uint256 public originationCoreFees;
-    // true if the sponsor has claimed purchase tokens / remaining offer tokens at conclusion of sale, false otherwise
+    // true if the sponsor has claimed purchase tokens at conclusion of sale, false otherwise
     bool public sponsorTokensClaimed;
 
     //--------------------------------------------------------------------------
@@ -87,7 +92,7 @@ contract NonFungibleOriginationPool is
         uint256 nftAmount,
         uint256 tokenAmountSent
     );
-    event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
+    event PurchaseTokensClaim(address indexed owner, uint256 amountClaimed);
 
     //--------------------------------------------------------------------------
     // Modifiers
@@ -133,6 +138,7 @@ contract NonFungibleOriginationPool is
 
         whitelistSaleDuration = _saleParams.whitelistSaleDuration;
         publicSaleDuration = _saleParams.publicSaleDuration;
+        saleDuration = whitelistSaleDuration + publicSaleDuration;
 
         _transferOwnership(_admin);
     }
@@ -185,7 +191,7 @@ contract NonFungibleOriginationPool is
         private
         nonReentrant
     {
-        require(saleInitiated, "Sale not initiated");
+        require(saleInitiated, "Sale not initiated"); // could be redundant
         userMints[_minter] += _quantityToMint;
 
         require(
@@ -263,7 +269,7 @@ contract NonFungibleOriginationPool is
      * @dev Admin function to claim the purchase tokens from the sale
      * @dev Can only claim at the conclusion of the sale
      */
-    function claimPurchaseToken() external onlyOwnerOrManager {
+    function claimPurchaseTokens() external onlyOwnerOrManager {
         require(
             block.timestamp > saleEndTimestamp ||
                 totalMints == maxTotalMintable,
@@ -292,7 +298,17 @@ contract NonFungibleOriginationPool is
             );
         }
 
-        emit PurchaseTokenClaim(owner(), claimAmount);
+        emit PurchaseTokensClaim(owner(), claimAmount);
+    }
+
+    /**
+     * @dev Admin function to set a manager
+     * @dev Manager has same rights as owner (except setting a manager)
+     *
+     * @param _manager The manager address
+     */
+    function setManager(address _manager) external onlyOwner {
+        manager = _manager;
     }
 
     //--------------------------------------------------------------------------

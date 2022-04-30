@@ -1,7 +1,5 @@
-const { ethers, deployments, upgrades } = require("hardhat");
-const { MerkleTree } = require("merkletreejs");
-const keccak256 = require("keccak256");
-const { deployArgs, deploy, getMerkleTree, getMerkleProofs, getMerkleWhitelist } = require("../scripts/helpers");
+const { ethers, deployments } = require("hardhat");
+const { deployArgs, deploy, getMerkleTree, getMerkleProofs, getMerkleWhitelist } = require("../../scripts/helpers");
 
 const createFixture = deployments.createFixture(async () => {
   // get signers
@@ -18,7 +16,6 @@ const createFixture = deployments.createFixture(async () => {
   const rootHash = merkleTree.getHexRoot();
   const [deployerProof, userProof] = await getMerkleProofs();
   const whitelist = await getMerkleWhitelist();
-  const purchaseCap = ethers.utils.parseUnits("2000.0", 10);
 
   // token transfers
   await purchaseToken.transfer(user.address, ethers.utils.parseEther("1000000"));
@@ -35,10 +32,15 @@ const createFixture = deployments.createFixture(async () => {
 
   // deploy the test upgrade contract
   const originationPoolUpgrade = await deploy('OriginationPoolUpgrade');
+  // deploy the test upgrade contract
+  const nonFungibleOriginationPoolUpgrade = await deploy('NonFungiblePoolUpgrade');
 
   const xTokenManager = await deploy('MockxTokenManager');
   // set deployer as the revenue controller
   await xTokenManager.setRevenueController(deployer.address);
+
+  // Deploy origination proxy admin
+  const proxyAdmin = await deploy('OriginationProxyAdmin');
 
   // deploy pool deployer
   const poolDeployer = await deployArgs('PoolDeployer', originationPoolImpl.address, nonFungibleOriginationPoolImpl.address);
@@ -53,7 +55,9 @@ const createFixture = deployments.createFixture(async () => {
 
   const originationCoreProxy = await deployArgs('OriginationCoreProxy', originationCoreImpl.address, user.address);
   const originationCore = await ethers.getContractAt('OriginationCore', originationCoreProxy.address);
-  await originationCore.initialize(listingFee, originationFee, xTokenManager.address, poolDeployer.address, nftDeployer.address);
+  await originationCore.initialize(listingFee, originationFee, xTokenManager.address, 
+      poolDeployer.address, nftDeployer.address, proxyAdmin.address);
+  await proxyAdmin.transferOwnership(originationCore.address);
 
   // token sale parameters
   const offerPricePerPurchaseToken = ethers.utils.parseEther("0.1"); // selling at 0.1 ETH
@@ -393,6 +397,7 @@ const createFixture = deployments.createFixture(async () => {
     purchaseTokenDecimalsLower,
     offerToken,
     originationPoolUpgrade,
+    nonFungibleOriginationPoolUpgrade,
     originationPool,
     originationPoolETH,
     originationPoolWhitelist,
@@ -405,7 +410,6 @@ const createFixture = deployments.createFixture(async () => {
     rootHash,
     deployerProof,
     userProof,
-    purchaseCap,
     whitelist
   };
 });

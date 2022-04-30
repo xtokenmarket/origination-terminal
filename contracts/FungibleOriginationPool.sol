@@ -13,6 +13,12 @@ import "./interface/IVestingEntryNFT.sol";
 
 import "./VestingEntryNFT.sol";
 
+/**
+ * Origination pool representing a fungible token sale
+ * Users buy an ERC-20 token using ETH or other ERC-20 token
+ * If the set reserve amount is reached, token sale can be finalized and
+ * Users can claim their offer tokens
+ */
 contract FungibleOriginationPool is
     IFungibleOriginationPool,
     Initializable,
@@ -42,18 +48,20 @@ contract FungibleOriginationPool is
     uint256 private purchaseTokenDecimals;
 
     // Token sale params
-    // the sale starting price (in purchase token)
+    // the public sale starting price (in purchase token)
     uint256 public publicStartingPrice;
-    // the sale ending price (in purchase token)
+    // the public sale ending price (in purchase token)
     uint256 public publicEndingPrice;
-    // the sale starting price for whitelisted addresses (in purchase token)
+    // the whitelist sale starting price (in purchase token)
     uint256 public whitelistStartingPrice;
-    // the sale ending price for whitelisted addresses (in purchase token)
+    // the whitelist sale ending price (in purchase token)
     uint256 public whitelistEndingPrice;
     // the public sale duration (in seconds)
     uint256 public publicSaleDuration;
     // whitelist sale duration (in seconds)
     uint256 public whitelistSaleDuration;
+    // the total sale duration
+    uint256 public saleDuration;
     // the total amount of offer tokens for sale
     uint256 public totalOfferingAmount;
     // need to raise this amount of purchase tokens for sale completion
@@ -184,6 +192,7 @@ contract FungibleOriginationPool is
         );
         publicSaleDuration = _saleParams.publicSaleDuration;
         whitelistSaleDuration = _saleParams.whitelistSaleDuration;
+        saleDuration = whitelistSaleDuration + publicSaleDuration;
 
         totalOfferingAmount = _saleParams.totalOfferingAmount;
         reserveAmount = _saleParams.reserveAmount;
@@ -384,7 +393,7 @@ contract FungibleOriginationPool is
                 require(
                     ownerOfEntry == msg.sender,
                     "User not owner of vest id"
-                );
+                ); 
                 require(
                     tokenAmount != tokenAmountClaimed,
                     "User has already claimed his token vesting"
@@ -493,12 +502,14 @@ contract FungibleOriginationPool is
     }
 
     /**
-     * Get purchase token amount from offer token amount
+     * @dev Get purchase token amount from offer token amount
+     * @param offerAmount offer token amount
+     * @return purchaseAmount purchase token amount
      */
-    function getPurchaseAmountFromOfferAmount(uint256 mintAmount)
+    function getPurchaseAmountFromOfferAmount(uint256 offerAmount)
         public
         view
-        returns (uint256 investedAmount)
+        returns (uint256 purchaseAmount)
     {
         require(
             block.timestamp <= saleEndTimestamp,
@@ -507,8 +518,8 @@ contract FungibleOriginationPool is
 
         uint256 offerTokenPrice = getOfferTokenPrice();
 
-        investedAmount = _divUp(
-            _divUp(mintAmount * offerTokenPrice, purchaseTokenDecimals) *
+        purchaseAmount = _divUp(
+            _divUp(offerAmount * offerTokenPrice, purchaseTokenDecimals) *
                 purchaseTokenDecimals,
             offerTokenDecimals
         );
@@ -534,7 +545,6 @@ contract FungibleOriginationPool is
         uint256 saleRange = _startingPrice < _endingPrice
             ? _endingPrice - _startingPrice
             : _startingPrice - _endingPrice;
-        uint256 saleDuration = whitelistSaleDuration + publicSaleDuration;
         uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) /
             timeElapsed;
         uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
@@ -549,15 +559,15 @@ contract FungibleOriginationPool is
      *
      * @param tokenAmount the token amount
      * @param tokenAmountClaimed the claimed token amount
-     * @return vestableTokenAmount The claimable offer token amount
+     * @return claimableTokenAmount The claimable offer token amount
      */
     function calculateClaimableVestedAmount(
         uint256 tokenAmount,
         uint256 tokenAmountClaimed
-    ) public view returns (uint256 vestableTokenAmount) {
+    ) public view returns (uint256 claimableTokenAmount) {
         uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
 
-        vestableTokenAmount = timeSinceInit >= vestingPeriod
+        claimableTokenAmount = timeSinceInit >= vestingPeriod
             ? tokenAmount - tokenAmountClaimed
             : ((timeSinceInit * tokenAmount) / vestingPeriod) -
                 tokenAmountClaimed;
@@ -605,7 +615,6 @@ contract FungibleOriginationPool is
         );
         saleInitiated = true;
         saleInitiatedTimestamp = block.timestamp;
-        uint256 saleDuration = whitelistSaleDuration + publicSaleDuration;
         saleEndTimestamp = saleInitiatedTimestamp + saleDuration;
 
         emit InitiateSale(totalOfferingAmount);
@@ -676,7 +685,8 @@ contract FungibleOriginationPool is
     }
 
     /**
-     * @dev Admin function to set a manager (fellow admin)
+     * @dev Admin function to set a manager
+     * @dev Manager has same rights as owner (except setting a manager)
      *
      * @param _manager The manager address
      */
@@ -688,7 +698,10 @@ contract FungibleOriginationPool is
     // Utils Functions
     //--------------------------------------------------------------------------
 
-    function _divUp(uint256 n, uint256 d) internal pure returns (uint256) {
-        return (n + d - 1) / d;
+    /**
+     * @dev Divides num by div, rounding up
+     */
+    function _divUp(uint256 num, uint256 div) internal pure returns (uint256) {
+        return (num + div - 1) / div;
     }
 }

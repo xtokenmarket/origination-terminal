@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract MockNFTIntegration is ERC721 {
+contract MockNFTIntegration is ERC721Enumerable {
     address originationCore;
     address originationInstance;
 
@@ -23,13 +23,10 @@ contract MockNFTIntegration is ERC721 {
 
     function mintTo(address _minter, uint256 _quantityToMint) external {
         require(msg.sender == originationInstance, "Invalid minter");
-
-        // other logic as desired
-
+        uint256 tokenId = totalSupply();
         for (uint256 i = 0; i < _quantityToMint; i++) {
-            _mint(_minter, 1);
+            _mint(_minter, tokenId);
+            tokenId++;
         }
-
-        // other logic as desired
     }
 }

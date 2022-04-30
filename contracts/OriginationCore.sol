@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import "./OriginationProxyAdmin.sol";
 
 import "./interface/IPoolDeployer.sol";
 import "./interface/INFTDeployer.sol";
@@ -15,7 +14,12 @@ import "./interface/IFungibleOriginationPool.sol";
 import "./interface/INonFungibleOriginationPool.sol";
 import "./interface/IxTokenManager.sol";
 import "./interface/INonFungibleToken.sol";
+import "./interface/IOriginationProxyAdmin.sol";
 
+/**
+ * Core contract responsible for deploying token sale pools
+ * Deploys two types of pools - Fungible and NonFungible
+ */
 contract OriginationCore is
     IOriginationCore,
     Initializable,
@@ -28,8 +32,10 @@ contract OriginationCore is
     // flat fee on deployment
     uint256 public listingFee;
 
-    mapping(address => uint256) public customListingFee; // Premium deployment fees for select partners
-    mapping(address => bool) public customListingFeeEnabled; // True if premium fee is enabled
+    // Premium deployment fees for select partners
+    mapping(address => uint256) public customListingFee;
+    // True if premium fee is enabled
+    mapping(address => bool) public customListingFeeEnabled;
 
     // percent fee share of purchases
     // 1e18 = 100% fee. 1e16 = 1% fee
@@ -40,7 +46,7 @@ contract OriginationCore is
     // with the proxy instance
     // nb: transparentupgradeableproxy pattern has a limitation where proxyAdmin can't interact
     // directly with contract b/c address's txs are routed to proxy logic, not implementation
-    OriginationProxyAdmin public proxyAdmin;
+    IOriginationProxyAdmin public proxyAdmin;
 
     // The xTokenManager in charge of the revenue controller that will claim fees
     IxTokenManager private xTokenManager;
@@ -73,13 +79,16 @@ contract OriginationCore is
      * @param _originationFee The origination fee
      * @param _xTokenManager The xtoken manager contract
      * @param _poolDeployer The contract which deploys origination pools
+     * @param _nftDeployer The contract which deploys nft vesting contracts
+     * @param _proxyAdmin Proxy admin of deployed pools
      */
     function initialize(
         uint256 _listingFee,
         uint256 _originationFee,
         IxTokenManager _xTokenManager,
         IPoolDeployer _poolDeployer,
-        INFTDeployer _nftDeployer
+        INFTDeployer _nftDeployer,
+        IOriginationProxyAdmin _proxyAdmin
     ) external initializer {
         __Ownable_init();
 
@@ -91,7 +100,7 @@ contract OriginationCore is
         xTokenManager = _xTokenManager;
         poolDeployer = _poolDeployer;
         nftDeployer = _nftDeployer;
-        proxyAdmin = new OriginationProxyAdmin();
+        proxyAdmin = _proxyAdmin;
     }
 
     //--------------------------------------------------------------------------
@@ -162,7 +171,7 @@ contract OriginationCore is
         require(msg.value == feeOwed, "Incorrect listing fee");
         require(
             saleParams.maxWhitelistMintable <= saleParams.maxTotalMintable,
-            "Invalid mintable"
+            "Invalid whitelist mintable amount"
         );
 
         // Deploy the pool
@@ -230,7 +239,7 @@ contract OriginationCore is
     }
 
     /**
-     * @dev Claims the accrued fees the origination pools
+     * @dev Claims the accrued fees in the origination pools
      *
      * @param _feeToken The token address of the fee to claim
      */

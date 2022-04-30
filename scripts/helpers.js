@@ -124,6 +124,10 @@ function bnDecimal(amount) {
     return bn(amount).mul(decimals);
 }
 
+function getEmptyBytes() {
+    return ethers.utils.formatBytes32String('0');
+}
+
 /**
  * Returns bignumber scaled to custom amount of decimals
  */
@@ -203,9 +207,79 @@ async function getMerkleProofs() {
     return proofs;
 }
 
+/**
+ * Return array used to generate merkle tree for nft pools
+ * Array contains whitelisted addresses
+ * @returns 
+ */
+ async function getMerkleWhitelistNonFungible() {
+    let [deployer, user, user1, user2] = await ethers.getSigners();
+    let whitelist = [deployer.address, user.address, user1.address, user2.address];
+    return whitelist;
+}
+
+/**
+ * Get merkle tree leaves from addresses
+ * Used in NonFungibleOriginationPool
+ * keccak256(address)
+ * @returns Array of hashes
+ */
+async function getMerkleTreeLeavesNonFungible() {
+    let whitelist = await getMerkleWhitelistNonFungible();
+    const hashes = whitelist.map((addr) => keccak256(addr));
+    return hashes;
+}
+
+/**
+ * return test merkle tree with addresses for nft pools
+ * Used for testing with the hardhat default addresses
+ */
+async function getMerkleTreeNonFungible() {
+    const merkleTreeLeaves = await getMerkleTreeLeavesNonFungible();
+
+    const merkleTree = new MerkleTree(merkleTreeLeaves, keccak256, {
+        sortPairs: true,
+        sortLeaves: true
+    });
+      
+    return merkleTree;
+}
+
+/**
+ * Return merkle proofs for nft pools
+ * Used for testing with hh default addresses
+ * @returns 
+ */
+async function getMerkleProofsNonFungible() {
+    let merkleTreeLeaves = await getMerkleTreeLeavesNonFungible();
+    // create merkle tree
+    const merkleTree = new MerkleTree(merkleTreeLeaves, keccak256, {
+        sortPairs: true,
+        sortLeaves: true
+    });
+
+    let proofs = [];
+    for(let i = 0 ; i < merkleTreeLeaves.length ; ++i) {
+        let proof = merkleTree.getHexProof(merkleTreeLeaves[i]);
+        proofs.push(proof);
+    }
+    return proofs;
+}
+
+
+/**
+ * Get ETH Balance of contract
+ * @param {ethers.Contract} contract 
+ */
+ async function getBalance(contract) {
+    return await contract.provider.getBalance(contract.address);
+}
+
 
 module.exports = { deploy, deployArgs, deployWithAbi, deployAndLink,
                     verifyContractNoArgs, verifyContractWithArgs, verifyContractWithArgsAndName,
                     increaseTime, mineBlocks, setBalance, getMerkleTree, getMerkleProofs,
-                    getMerkleWhitelist
+                    getMerkleWhitelist, getMerkleTreeNonFungible, getMerkleProofsNonFungible,
+                    getMerkleWhitelistNonFungible, bn, bnDecimal, bnDecimals, getEmptyBytes,
+                    getBalance
                 }
