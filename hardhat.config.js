@@ -14,8 +14,8 @@ module.exports = {
   networks: {
     hardhat: {
 			forking: {
-				url: process.env.ALCHEMY_URL_KOVAN,
-        enabled: true,
+				url: process.env.ALCHEMY_URL,
+        enabled: false,
         blockNumber: 30841726
 			},
       initialBaseFeePerGas: 0,

@@ -34,7 +34,7 @@ describe("Fungible token sale vesting", async () => {
       // get the vesting id
       const userVestingId = await originationPoolVesting.userToVestingId(user.address);
 
-      await expect(originationPoolVesting.claimVested([userVestingId])).to.be.revertedWith("Sale has not ended");
+      await expect(originationPoolVesting.claimVested([userVestingId])).to.be.revertedWith("Not past cliff period");
     });
 
     it("should fail to claim vested tokens before cliff period", async () => {

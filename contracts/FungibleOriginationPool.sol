@@ -308,7 +308,7 @@ contract FungibleOriginationPool is
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
             feeInPurchaseToken = _divUp(
-                contributionAmount - refundAmount,
+                contributionAmount,
                 1e18
             );
 
@@ -376,7 +376,6 @@ contract FungibleOriginationPool is
      * @param _nftIds The vesting entries ids
      */
     function claimVested(uint256[] calldata _nftIds) external nonReentrant {
-        require(block.timestamp > saleEndTimestamp, "Sale has not ended");
         require(
             saleEndTimestamp + cliffPeriod < block.timestamp,
             "Not past cliff period"
@@ -640,7 +639,6 @@ contract FungibleOriginationPool is
                 require(success);
                 // send fees to core
                 originationCore.receiveFees{value: originationCoreFees}();
-                require(success);
             } else {
                 claimAmount =
                     purchaseToken.balanceOf(address(this)) -
