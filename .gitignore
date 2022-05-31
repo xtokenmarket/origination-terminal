@@ -1,0 +1,13 @@
+.vscode/
+node_modules/
+cache/
+artifacts/
+coverage/
+
+coverage.json
+
+.DS_Store
+
+
+.env*
+!.env.example

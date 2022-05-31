@@ -307,10 +307,7 @@ contract FungibleOriginationPool is
             // Modify token amount, contribution amount and fee amount
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
-            feeInPurchaseToken = _divUp(
-                contributionAmount,
-                1e18
-            );
+            feeInPurchaseToken = _divUp(contributionAmount, 1e18);
 
             // Indicate sale is over
             saleEndTimestamp = block.timestamp;
@@ -376,48 +373,48 @@ contract FungibleOriginationPool is
      * @param _nftIds The vesting entries ids
      */
     function claimVested(uint256[] calldata _nftIds) external nonReentrant {
+        require(_nftIds.length > 0, "No vesting entry NFT id provided");
         require(
             saleEndTimestamp + cliffPeriod < block.timestamp,
             "Not past cliff period"
         );
+        require(purchaseTokensAcquired >= reserveAmount, "Sale reserve amount not met");
 
-        if (purchaseTokensAcquired >= reserveAmount) {
-            for (uint256 i = 0; i < _nftIds.length; i++) {
-                uint256 entryId = _nftIds[i];
-                (
-                    uint256 tokenAmount,
-                    uint256 tokenAmountClaimed
-                ) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
-                address ownerOfEntry = vestingEntryNFT.ownerOf(entryId);
-                require(
-                    ownerOfEntry == msg.sender,
-                    "User not owner of vest id"
-                ); 
-                require(
-                    tokenAmount != tokenAmountClaimed,
-                    "User has already claimed his token vesting"
-                );
+        for (uint256 i = 0; i < _nftIds.length; i++) {
+            uint256 entryId = _nftIds[i];
+            (
+                uint256 tokenAmount,
+                uint256 tokenAmountClaimed
+            ) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
+            address ownerOfEntry = vestingEntryNFT.ownerOf(entryId);
+            require(
+                ownerOfEntry == msg.sender,
+                "User not owner of vest id"
+            );
+            require(
+                tokenAmount != tokenAmountClaimed,
+                "User has already claimed his token vesting"
+            );
 
-                uint256 offerTokenPayout = calculateClaimableVestedAmount(
-                    tokenAmount,
-                    tokenAmountClaimed
-                );
-                uint256 tokenAmountRemaining = tokenAmount - tokenAmountClaimed;
-                vestingEntryNFT.setVestingAmounts(
-                    entryId,
-                    tokenAmount,
-                    tokenAmountClaimed + offerTokenPayout
-                );
+            uint256 offerTokenPayout = calculateClaimableVestedAmount(
+                tokenAmount,
+                tokenAmountClaimed
+            );
+            uint256 tokenAmountRemaining = tokenAmount - tokenAmountClaimed;
+            vestingEntryNFT.setVestingAmounts(
+                entryId,
+                tokenAmount,
+                tokenAmountClaimed + offerTokenPayout
+            );
 
-                offerToken.safeTransfer(msg.sender, offerTokenPayout);
-                vestableTokenAmount -= offerTokenPayout;
+            offerToken.safeTransfer(msg.sender, offerTokenPayout);
+            vestableTokenAmount -= offerTokenPayout;
 
-                emit ClaimVested(
-                    msg.sender,
-                    offerTokenPayout,
-                    tokenAmountRemaining
-                );
-            }
+            emit ClaimVested(
+                msg.sender,
+                offerTokenPayout,
+                tokenAmountRemaining
+            );
         }
     }
 
@@ -564,8 +561,13 @@ contract FungibleOriginationPool is
         uint256 tokenAmount,
         uint256 tokenAmountClaimed
     ) public view returns (uint256 claimableTokenAmount) {
-        uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
+        require(
+            saleEndTimestamp + cliffPeriod < block.timestamp,
+            "Not past cliff period"
+        );
 
+        uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
+        
         claimableTokenAmount = timeSinceInit >= vestingPeriod
             ? tokenAmount - tokenAmountClaimed
             : ((timeSinceInit * tokenAmount) / vestingPeriod) -

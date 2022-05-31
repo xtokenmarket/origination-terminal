@@ -1,31 +1,31 @@
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-waffle");
-require('@nomiclabs/hardhat-etherscan');
+require("@nomiclabs/hardhat-etherscan");
 require("hardhat-deploy");
 require("hardhat-deploy-ethers");
 require("@openzeppelin/hardhat-upgrades");
 // require('hardhat-contract-sizer');
 require("solidity-coverage");
 
-require('dotenv').config();
+require("dotenv").config();
 
 module.exports = {
   networks: {
     hardhat: {
-			forking: {
-				url: process.env.ALCHEMY_URL,
-        enabled: false,
-        blockNumber: 30841726
-			},
+      forking: {
+        url: process.env.ALCHEMY_URL_KOVAN,
+        enabled: true,
+        blockNumber: 30841726,
+      },
       initialBaseFeePerGas: 0,
-      allowUnlimitedContractSize: true
+      allowUnlimitedContractSize: true,
     },
     mainnet: {
       url: process.env.ALCHEMY_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY],
       gasPrice: 155000000000,
-      gas: 2222222
+      gas: 2222222,
     },
     arbitrum: {
       url: process.env.ALCHEMY_URL_ARBITRUM,
@@ -43,13 +43,13 @@ module.exports = {
       url: process.env.ALCHEMY_URL_POLYGON,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY],
       // gasPrice: 44000000000 // 44 gwei,
-      gas: 8888888
+      gas: 8888888,
     },
     kovan: {
       url: process.env.ALCHEMY_URL_KOVAN,
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
       //gasPrice: 1100000000,
-      gas: 7777777
+      gas: 7777777,
     },
     rinkeby: {
       url: process.env.ALCHEMY_URL_RINKEBY,
@@ -62,22 +62,22 @@ module.exports = {
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
       // gasPrice: 1100000000,
       // gas: 7777777
-    }
+    },
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   solidity: {
-    version: '0.8.4',
+    version: "0.8.4",
     settings: {
       optimizer: {
         enabled: true,
         runs: 100,
-      }
-    }
+      },
+    },
   },
   contractSizer: {
     alphaSort: true,
     runOnCompile: false,
-  }
-}
+  },
+};

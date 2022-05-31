@@ -24,39 +24,38 @@ const createFixture = deployments.createFixture(async () => {
   await purchaseTokenDecimalsLower.transfer(user1.address, ethers.utils.parseUnits("1000000", 6));
 
   // deploy fungible origination pool implementation
-  const originationPoolImpl = await deploy('FungibleOriginationPool')
+  const originationPoolImpl = await deploy("FungibleOriginationPool");
   // deploy non-fungible origination pool implementation
-  const nonFungibleOriginationPoolImpl = await deploy('NonFungibleOriginationPool');
+  const nonFungibleOriginationPoolImpl = await deploy("NonFungibleOriginationPool");
   // deploy vesting entry nft implementation
-  const vestingEntryNFTImpl = await deploy('VestingEntryNFT');
+  const vestingEntryNFTImpl = await deploy("VestingEntryNFT");
 
   // deploy the test upgrade contract
-  const originationPoolUpgrade = await deploy('OriginationPoolUpgrade');
+  const originationPoolUpgrade = await deploy("OriginationPoolUpgrade");
   // deploy the test upgrade contract
-  const nonFungibleOriginationPoolUpgrade = await deploy('NonFungiblePoolUpgrade');
+  const nonFungibleOriginationPoolUpgrade = await deploy("NonFungiblePoolUpgrade");
 
-  const xTokenManager = await deploy('MockxTokenManager');
+  const xTokenManager = await deploy("MockxTokenManager");
   // set deployer as the revenue controller
   await xTokenManager.setRevenueController(deployer.address);
 
   // Deploy origination proxy admin
-  const proxyAdmin = await deploy('OriginationProxyAdmin');
+  const proxyAdmin = await deploy("OriginationProxyAdmin");
 
   // deploy pool deployer
-  const poolDeployer = await deployArgs('PoolDeployer', originationPoolImpl.address, nonFungibleOriginationPoolImpl.address);
+  const poolDeployer = await deployArgs("PoolDeployer", originationPoolImpl.address, nonFungibleOriginationPoolImpl.address);
 
   // deploy vesting entry nft deployer
-  const nftDeployer = await deployArgs('NFTDeployer', vestingEntryNFTImpl.address)
+  const nftDeployer = await deployArgs("NFTDeployer", vestingEntryNFTImpl.address);
 
   // deploy origination core
   const listingFee = ethers.utils.parseEther("0.01"); // 1 %
   const originationFee = ethers.utils.parseEther("0.01");
-  const originationCoreImpl = await deploy('OriginationCore');
+  const originationCoreImpl = await deploy("OriginationCore");
 
-  const originationCoreProxy = await deployArgs('OriginationCoreProxy', originationCoreImpl.address, user.address);
-  const originationCore = await ethers.getContractAt('OriginationCore', originationCoreProxy.address);
-  await originationCore.initialize(listingFee, originationFee, xTokenManager.address, 
-      poolDeployer.address, nftDeployer.address, proxyAdmin.address);
+  const originationCoreProxy = await deployArgs("OriginationCoreProxy", originationCoreImpl.address, user.address);
+  const originationCore = await ethers.getContractAt("OriginationCore", originationCoreProxy.address);
+  await originationCore.initialize(listingFee, originationFee, xTokenManager.address, poolDeployer.address, nftDeployer.address, proxyAdmin.address);
   await proxyAdmin.transferOwnership(originationCore.address);
 
   // token sale parameters
@@ -66,6 +65,10 @@ const createFixture = deployments.createFixture(async () => {
   const saleThreshold = ethers.utils.parseEther("1");
   const vestingPeriod = 0; // no vesting period
   const cliffPeriod = 0; // no cliff period
+  const whitelistStartingPrice = 0;
+  const whitelistEndingPrice = 0;
+  const publicSaleDuration = 86400; // duration of 24 hours
+  const whitelistSaleDuration = 0; // duration of 24 hours
 
   // ***deploy test case where purchase token are not ETH
   // create listing
@@ -75,10 +78,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: purchaseToken.address,
       publicStartingPrice: offerPricePerPurchaseToken, // starting price
       publicEndingPrice: offerPricePerPurchaseToken, // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 0
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: saleThreshold,
       vestingPeriod: vestingPeriod,
@@ -110,10 +113,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: ethers.constants.AddressZero,
       publicStartingPrice: offerPricePerPurchaseToken, // starting price
       publicEndingPrice: offerPricePerPurchaseToken, // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 0
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: saleThreshold,
       vestingPeriod: vestingPeriod,
@@ -145,10 +148,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: purchaseTokenDecimalsLower.address,
       publicStartingPrice: lowerDecimalsPurchasePrice, // starting price
       publicEndingPrice: lowerDecimalsPurchasePrice, // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 24 hours
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: ethers.utils.parseUnits("1000000", 10),
       reserveAmount: ethers.utils.parseUnits("1", 6),
       vestingPeriod: vestingPeriod,
@@ -168,9 +171,7 @@ const createFixture = deployments.createFixture(async () => {
 
   // token approvals
   await purchaseTokenDecimalsLower.approve(originationPoolDecimals.address, ethers.utils.parseEther("10000000000"));
-  await purchaseTokenDecimalsLower
-    .connect(user)
-    .approve(originationPoolDecimals.address, ethers.utils.parseEther("10000000000"));
+  await purchaseTokenDecimalsLower.connect(user).approve(originationPoolDecimals.address, ethers.utils.parseEther("10000000000"));
   await offerToken.approve(originationPoolDecimals.address, ethers.utils.parseEther("1000000"));
   await offerToken.connect(user).approve(originationPoolDecimals.address, ethers.utils.parseEther("1000000"));
 
@@ -182,10 +183,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: purchaseToken.address,
       publicStartingPrice: offerPricePerPurchaseToken, // starting price
       publicEndingPrice: offerPricePerPurchaseToken.mul(4), // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 24 hours
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: saleThreshold,
       vestingPeriod: vestingPeriod,
@@ -217,10 +218,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: purchaseToken.address,
       publicStartingPrice: offerPricePerPurchaseToken.mul(4), // starting price
       publicEndingPrice: offerPricePerPurchaseToken, // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 24 hours
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: saleThreshold,
       vestingPeriod: vestingPeriod,
@@ -252,10 +253,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: purchaseToken.address,
       publicStartingPrice: offerPricePerPurchaseToken, // starting price
       publicEndingPrice: offerPricePerPurchaseToken, // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 24 hours
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: saleThreshold,
       vestingPeriod: 259200, // 3 days vesting period
@@ -287,10 +288,10 @@ const createFixture = deployments.createFixture(async () => {
       purchaseToken: purchaseTokenDecimalsLower.address,
       publicStartingPrice: lowerDecimalsPurchasePrice, // starting price
       publicEndingPrice: lowerDecimalsPurchasePrice, // ending price
-      whitelistStartingPrice: 0,
-      whitelistEndingPrice: 0,
-      publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0, // duration of 24 hours
+      whitelistStartingPrice: whitelistStartingPrice,
+      whitelistEndingPrice: whitelistEndingPrice,
+      publicSaleDuration: publicSaleDuration,
+      whitelistSaleDuration: whitelistSaleDuration,
       totalOfferingAmount: ethers.utils.parseUnits("1000000", 10),
       reserveAmount: ethers.utils.parseUnits("1", 6),
       vestingPeriod: 259200, // 3 days vesting period
@@ -309,17 +310,10 @@ const createFixture = deployments.createFixture(async () => {
   await originationPoolVestingDecimals.setWhitelist(rootHash);
 
   // token approvals
-  await purchaseTokenDecimalsLower.approve(
-    originationPoolVestingDecimals.address,
-    ethers.utils.parseEther("10000000000")
-  );
-  await purchaseTokenDecimalsLower
-    .connect(user)
-    .approve(originationPoolVestingDecimals.address, ethers.utils.parseEther("10000000000"));
+  await purchaseTokenDecimalsLower.approve(originationPoolVestingDecimals.address, ethers.utils.parseEther("10000000000"));
+  await purchaseTokenDecimalsLower.connect(user).approve(originationPoolVestingDecimals.address, ethers.utils.parseEther("10000000000"));
   await offerToken.approve(originationPoolVestingDecimals.address, ethers.utils.parseUnits("1000000", 10));
-  await offerToken
-    .connect(user)
-    .approve(originationPoolVestingDecimals.address, ethers.utils.parseUnits("1000000", 10));
+  await offerToken.connect(user).approve(originationPoolVestingDecimals.address, ethers.utils.parseUnits("1000000", 10));
 
   // ***deploy test case where purchase token are not ETH
   // ***and whitelist sale duration is not 0
@@ -332,7 +326,7 @@ const createFixture = deployments.createFixture(async () => {
       publicEndingPrice: offerPricePerPurchaseToken, // ending price
       whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
       whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
-      publicSaleDuration: 86400, // duration of 24 hours
+      publicSaleDuration: publicSaleDuration,
       whitelistSaleDuration: 86400, // duration of 24 hours
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: saleThreshold,
@@ -410,7 +404,24 @@ const createFixture = deployments.createFixture(async () => {
     rootHash,
     deployerProof,
     userProof,
-    whitelist
+    whitelist,
+    originationFee,
+    poolCreationParams: {
+      [originationPool.address]: {
+        offerToken: offerToken.address,
+        purchaseToken: ethers.constants.AddressZero,
+        publicStartingPrice: offerPricePerPurchaseToken, // starting price
+        publicEndingPrice: offerPricePerPurchaseToken, // ending price
+        whitelistStartingPrice: whitelistStartingPrice,
+        whitelistEndingPrice: whitelistEndingPrice,
+        publicSaleDuration: publicSaleDuration,
+        whitelistSaleDuration: whitelistSaleDuration,
+        totalOfferingAmount: totalOfferingAmount,
+        reserveAmount: saleThreshold,
+        vestingPeriod: vestingPeriod,
+        cliffPeriod: cliffPeriod,
+      },
+    },
   };
 });
 
