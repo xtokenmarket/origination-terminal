@@ -15,6 +15,7 @@ async function deployTestnet() {
   console.log("deployed origination pool implementations");
   // deploy vestingEntryNFT
   const vestingEntryNFT = await deploy("VestingEntryNFT");
+  await vestingEntryNFT.deployed();
 
   const xTokenManager = await deploy("MockxTokenManager");
   await xTokenManager.deployed();
@@ -28,6 +29,11 @@ async function deployTestnet() {
   console.log("deployed pool deployer");
   // deploy nft deployer
   const nftDeployer = await deployArgs("NFTDeployer", vestingEntryNFT.address);
+  await nftDeployer.deployed();
+
+  // deploy origination proxy admin
+  const proxyAdmin = await deploy("OriginationProxyAdmin");
+  await proxyAdmin.deployed();
 
   // deploy origination core
   const listingFee = ethers.utils.parseEther("0.01"); // 1 %
@@ -39,8 +45,15 @@ async function deployTestnet() {
   const originationCoreProxy = await deployArgs("OriginationCoreProxy", originationCoreImpl.address, user.address);
   await originationCoreProxy.deployed();
   console.log("deployed origination core proxy");
+
+  // transfer proxy admin ownership to origination core
+  await (await proxyAdmin.transferOwnership(originationCoreProxy.address)).wait();
+
+  // initialize origination core
   const originationCore = await ethers.getContractAt("OriginationCore", originationCoreProxy.address);
-  await (await originationCore.initialize(listingFee, originationFee, xTokenManager.address, poolDeployer.address, nftDeployer.address, user.address)).wait();
+  await (
+    await originationCore.initialize(listingFee, originationFee, xTokenManager.address, poolDeployer.address, nftDeployer.address, proxyAdmin.address)
+  ).wait();
 
   let originationProxyAdmin = await originationCore.proxyAdmin();
 
@@ -57,8 +70,6 @@ async function deployTestnet() {
   };
 
   fs.writeFileSync("./scripts/deployment_kovan.json", JSON.stringify(deployment));
-
-  //return;
 
   try {
     await verifyContractNoArgs(deployment.originationPoolImpl);

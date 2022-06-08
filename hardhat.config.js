@@ -48,8 +48,7 @@ module.exports = {
     kovan: {
       url: process.env.ALCHEMY_URL_KOVAN,
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
-      //gasPrice: 1100000000,
-      gas: 7777777,
+      gasPrice: 1100000000,
     },
     rinkeby: {
       url: process.env.ALCHEMY_URL_RINKEBY,
