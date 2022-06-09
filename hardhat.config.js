@@ -14,7 +14,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.ALCHEMY_URL_KOVAN,
+        url: process.env.ALCHEMY_URL_GOERLI,
         enabled: true,
         blockNumber: 30841726,
       },
@@ -45,19 +45,12 @@ module.exports = {
       // gasPrice: 44000000000 // 44 gwei,
       gas: 8888888,
     },
-    kovan: {
-      url: process.env.ALCHEMY_URL_KOVAN,
+    goerli: {
+      url: process.env.ALCHEMY_URL_GOERLI,
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
-      gasPrice: 1100000000,
-    },
-    rinkeby: {
-      url: process.env.ALCHEMY_URL_RINKEBY,
-      accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
-      // gasPrice: 1100000000,
-      // gas: 7777777
     },
     arbitrum_rinkeby: {
-      url: process.env.ALCHEMY_URL_RINKEBY,
+      url: process.env.ALCHEMY_URL_ARBITRUM_RINKEBY,
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
       // gasPrice: 1100000000,
       // gas: 7777777

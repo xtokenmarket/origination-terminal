@@ -69,7 +69,7 @@ async function deployTestnet() {
     nftDeployer: nftDeployer.address,
   };
 
-  fs.writeFileSync("./scripts/deployment_kovan.json", JSON.stringify(deployment));
+  fs.writeFileSync("./scripts/deployment_goerli.json", JSON.stringify(deployment));
 
   try {
     await verifyContractNoArgs(deployment.originationPoolImpl);
@@ -106,6 +106,12 @@ async function deployTestnet() {
   let originationCoreProxyName = "contracts/proxies/OriginationCoreProxy.sol:OriginationCoreProxy";
   try {
     await verifyContractWithArgsAndName(deployment.originationCore, originationCoreProxyName, deployment.originationCoreImpl, user.address);
+  } catch (err) {
+    console.log(err);
+  }
+
+  try {
+    await verifyContractWithArgs(deployment.nftDeployer, deployment.vestingEntryNFTImpl);
   } catch (err) {
     console.log(err);
   }
