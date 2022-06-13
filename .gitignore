@@ -9,5 +9,4 @@ coverage.json
 .DS_Store
 
 
-.env*
-!.env.example
+.env
