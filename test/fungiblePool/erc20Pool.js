@@ -162,7 +162,7 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
 
     await originationPoolWhitelist.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit);
     await expect(originationPoolWhitelist.connect(user).whitelistPurchase(userProof, 1, contributionLimit)).to.be.revertedWith(
-      "User has reached his max contribution amount"
+      "User has reached their max contribution amount"
     );
   });
 

@@ -248,7 +248,7 @@ contract FungibleOriginationPool is
             // If user has reached his limit completely revert
             require(
                 contributionAmount != 0,
-                "User has reached his max contribution amount"
+                "User has reached their max contribution amount"
             );
         }
 
@@ -393,7 +393,7 @@ contract FungibleOriginationPool is
             );
             require(
                 tokenAmount != tokenAmountClaimed,
-                "User has already claimed his token vesting"
+                "User has already claimed their token vesting"
             );
 
             uint256 offerTokenPayout = calculateClaimableVestedAmount(

@@ -16,7 +16,7 @@ module.exports = {
       forking: {
         url: process.env.ALCHEMY_URL_GOERLI,
         enabled: true,
-        blockNumber: 30841726,
+        blockNumber: 7058308,
       },
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,

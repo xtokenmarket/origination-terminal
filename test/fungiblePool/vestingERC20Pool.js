@@ -116,7 +116,7 @@ describe("Fungible token sale vesting", async () => {
 
     expect(offerTokensAfter).to.be.closeTo(BigNumber.from(Math.round(expectedAmountOut)), 1e6);
 
-    await expect(originationPoolVesting.connect(user).claimVested([userVestingId])).to.be.revertedWith("User has already claimed his token vesting");
+    await expect(originationPoolVesting.connect(user).claimVested([userVestingId])).to.be.revertedWith("User has already claimed their token vesting");
   });
 
   it("should return purchase tokens if sale did not meet reserve amount", async () => {
@@ -334,7 +334,7 @@ describe("Fungible token sale vesting", async () => {
     expect(offerTokensAfter).to.be.closeTo(BigNumber.from(Math.round(expectedAmountOut)), 1e6);
   });
 
-  it("user shouldn't be able to transfer nft and claim vesting from his old address", async () => {
+  it("user shouldn't be able to transfer nft and claim vesting from their old address", async () => {
     const amountIn = ethers.utils.parseEther("1");
 
     await originationPoolVesting.initiateSale();
@@ -357,7 +357,7 @@ describe("Fungible token sale vesting", async () => {
     await expect(originationPoolVesting.connect(user).claimVested([userVestingId])).to.be.revertedWith("User not owner of vest id");
   });
 
-  it("user should be able to transfer nft, make another investment and claim vesting from his address", async () => {
+  it("user should be able to transfer nft, make another investment and claim vesting from their address", async () => {
     const amountIn = ethers.utils.parseEther("1");
 
     await originationPoolVesting.initiateSale();

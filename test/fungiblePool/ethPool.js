@@ -83,7 +83,7 @@ describe("Fungible Pool with ETH as purchase coin", async () => {
 
     await originationPoolETHWhitelist.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit, { value: contributionLimit });
     await expect(originationPoolETHWhitelist.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit, { value: 1 })).to.be.revertedWith(
-      "User has reached his max contribution amount"
+      "User has reached their max contribution amount"
     );
   });
 
