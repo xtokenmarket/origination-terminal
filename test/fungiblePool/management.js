@@ -149,6 +149,11 @@ describe("Management functions", async () => {
     await expect(originationPool.connect(user).initiateSale()).to.not.be.reverted;
   });
 
+  it("should emit event on setting manager", async () => {
+    await expect(originationPool.setManager(user.address)).
+      to.emit(originationPool, 'ManagerSet').withArgs(user.address);
+  })
+
   it("should be able to set whitelist multiple times before sale initated as owner or manager", async () => {
     await originationPool.setManager(user.address);
 

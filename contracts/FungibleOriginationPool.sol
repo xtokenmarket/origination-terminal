@@ -120,6 +120,7 @@ contract FungibleOriginationPool is
     //--------------------------------------------------------------------------
 
     event InitiateSale(uint256 totalOfferingAmount);
+    event ManagerSet(address indexed manager);
     event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
     event Purchase(
         address indexed purchaser,
@@ -702,6 +703,7 @@ contract FungibleOriginationPool is
      */
     function setManager(address _manager) external onlyOwner {
         manager = _manager;
+        emit ManagerSet(manager);
     }
 
     //--------------------------------------------------------------------------

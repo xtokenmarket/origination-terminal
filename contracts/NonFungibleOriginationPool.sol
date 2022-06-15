@@ -87,6 +87,7 @@ contract NonFungibleOriginationPool is
     //--------------------------------------------------------------------------
 
     event InitiateSale(uint256 saleInitiatedTimestamp);
+    event ManagerSet(address indexed manager);
     event Minted(
         address indexed minter,
         uint256 nftAmount,
@@ -309,6 +310,7 @@ contract NonFungibleOriginationPool is
      */
     function setManager(address _manager) external onlyOwner {
         manager = _manager;
+        emit ManagerSet(manager);
     }
 
     //--------------------------------------------------------------------------

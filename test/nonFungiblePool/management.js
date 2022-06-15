@@ -52,4 +52,9 @@ describe("NFT sale management functions", async () => {
     let manager = await originationPool.manager();
     expect(manager).to.be.eq(user.address);
   });
+
+  it("should emit event on setting manager", async () => {
+    await expect(originationPool.setManager(user.address)).
+      to.emit(originationPool, 'ManagerSet').withArgs(user.address);
+  });
 });
