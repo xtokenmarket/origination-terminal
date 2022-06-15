@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const createFixture = require("./fungibleFixture");
 const { advanceTime } = require("../utils");
-const { increaseTime, getMerkleWhitelist } = require("../../scripts/helpers");
+const { increaseTime, getMerkleWhitelist, bn } = require("../../scripts/helpers");
 
 describe("Fungible Pool with ERC-20 Purchase token", async () => {
   beforeEach(async () => {
@@ -72,6 +72,26 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
 
     expect(offerBalanceAfter).to.equal(expectedAmountOut);
     expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter.add(amountIn));
+  });
+
+  it("shouldn't be able to purchase below the min contribution amount", async () => {
+    // disable whitelist
+    await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
+    // initiate sale
+    await originationPool.initiateSale();
+
+    // get min contribution amount
+    let minContributionAmount = await originationPool.minContributionAmount();
+
+    let purchaseTokenDecimals = await purchaseToken.decimals();
+    // min contribution amount is equal to purchase token decimals / 2
+    let expectedMinContributionAmount = bn(10).pow(bn(purchaseTokenDecimals).div(2));
+
+    expect(minContributionAmount).to.be.eq(expectedMinContributionAmount);
+
+    await expect(originationPool.connect(user).purchase(minContributionAmount.sub(1))).to.be.revertedWith(
+      "Need to contribute at least min contribution amount"
+    );
   });
 
   it("should fail to claim tokens twice", async () => {
@@ -153,6 +173,26 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
 
     expect(offerBalanceAfter).to.equal(expectedAmountOut);
     expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter.add(amountIn));
+  });
+
+  it("shouldn't be able to purchase below the min contribution amount when purchase decimals are less than offer decimals", async () => {
+    // disable whitelist
+    await originationPoolDecimals.setWhitelist(ethers.utils.formatBytes32String("0"));
+    // initiate sale
+    await originationPoolDecimals.initiateSale();
+
+    let minContributionAmount = await originationPoolDecimals.minContributionAmount();
+
+    let purchaseTokenDecimals = await purchaseTokenDecimalsLower.decimals();
+    let offerTokenDecimals = await offerToken.decimals();
+    // expected min contribution amount = 10 ^ (offer token decimals - purchase token decimals)
+    let expectedMinContributionAmount = bn(10).pow(bn(offerTokenDecimals).sub(purchaseTokenDecimals));
+
+    expect(minContributionAmount).to.be.eq(expectedMinContributionAmount);
+
+    await expect(originationPoolDecimals.connect(user).purchase(minContributionAmount.sub(1))).to.be.revertedWith(
+      "Need to contribute at least min contribution amount"
+    );
   });
 
   it("shouldn't be able to purchase above the contribution limit from a whitelisted address", async () => {

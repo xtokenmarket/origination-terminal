@@ -10,51 +10,59 @@ require("solidity-coverage");
 
 require("dotenv").config();
 
+const alchemy = {
+  mainnet: 'https://eth-mainnet.alchemyapi.io/v2/',
+  arbitrum: 'https://arb-mainnet.g.alchemy.com/v2/',
+  optimism: 'https://opt-mainnet.g.alchemy.com/v2/',
+  polygon: 'https://polygon-mainnet.g.alchemy.com/v2/',
+  goerli: 'https://eth-goerli.alchemyapi.io/v2/'
+}
+
+const key = process.env.ALCHEMY_KEY;
+if(!key) {
+  console.log('please set your ALCHEMY_KEY in .env');
+  return;
+}
+
 module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: process.env.ALCHEMY_URL_GOERLI,
-        enabled: true,
-        blockNumber: 7058308,
+        url: alchemy.mainnet + key,
+        enabled: false,
+        blockNumber: 14954700,
       },
       initialBaseFeePerGas: 0,
       allowUnlimitedContractSize: true,
     },
     mainnet: {
-      url: process.env.ALCHEMY_URL,
+      url: alchemy.mainnet + key,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY],
       gasPrice: 155000000000,
       gas: 2222222,
     },
     arbitrum: {
-      url: process.env.ALCHEMY_URL_ARBITRUM,
+      url: alchemy.arbitrum + key,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
       gas: 77777777,
       //gasPrice: 1000000000
     },
     optimism: {
-      url: process.env.ALCHEMY_URL_OPTIMISM,
+      url: alchemy.optimism + key,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY],
       // gasPrice: 44000000000, // 44 gwei
       gas: 15000000,
     },
     polygon: {
-      url: process.env.ALCHEMY_URL_POLYGON,
+      url: alchemy.polygon + key,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY],
       // gasPrice: 44000000000 // 44 gwei,
       gas: 8888888,
     },
     goerli: {
-      url: process.env.ALCHEMY_URL_GOERLI,
+      url: alchemy.goerli + key,
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
-    },
-    arbitrum_rinkeby: {
-      url: process.env.ALCHEMY_URL_ARBITRUM_RINKEBY,
-      accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
-      // gasPrice: 1100000000,
-      // gas: 7777777
-    },
+    }
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

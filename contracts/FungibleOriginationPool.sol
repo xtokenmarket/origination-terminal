@@ -66,6 +66,8 @@ contract FungibleOriginationPool is
     uint256 public totalOfferingAmount;
     // need to raise this amount of purchase tokens for sale completion
     uint256 public reserveAmount;
+    // need to invest at least this amount to participate in the sale
+    uint256 public minContributionAmount;
     // the vesting period (can be 0)
     uint256 public vestingPeriod;
     // the vesting cliff period (must be <= vesting period)
@@ -172,15 +174,23 @@ contract FungibleOriginationPool is
 
         offerToken = IERC20Metadata(_saleParams.offerToken);
         purchaseToken = IERC20Metadata(_saleParams.purchaseToken);
-        offerTokenDecimals = 10**offerToken.decimals();
-        purchaseTokenDecimals = _saleParams.purchaseToken == address(0)
-            ? 10**18
-            : 10**purchaseToken.decimals();
+        uint8 offerDecimals = offerToken.decimals();
+        uint8 purchaseDecimals = _saleParams.purchaseToken == address(0)
+            ? 18
+            : purchaseToken.decimals();
+        offerTokenDecimals = 10**offerDecimals;
+        purchaseTokenDecimals = 10**purchaseDecimals;
 
         publicStartingPrice = _saleParams.publicStartingPrice;
         publicEndingPrice = _saleParams.publicEndingPrice;
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
+
+        if(offerDecimals > purchaseDecimals) {
+            minContributionAmount = 10**(offerDecimals - purchaseDecimals);
+        } else {
+            minContributionAmount = 10**(purchaseDecimals / 2);
+        }
 
         require(
             _saleParams.publicSaleDuration <= MAX_SALE_DURATION,
@@ -273,7 +283,7 @@ contract FungibleOriginationPool is
             block.timestamp <= saleEndTimestamp,
             "Sale not started or over"
         );
-        require(contributionAmount > 0, "Must contribute");
+        require(contributionAmount >= minContributionAmount, "Need to contribute at least min contribution amount");
 
         address sender = msg.sender;
         if (address(purchaseToken) == address(0)) {
