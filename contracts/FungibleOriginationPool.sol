@@ -187,10 +187,10 @@ contract FungibleOriginationPool is
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
-        if(offerDecimals > purchaseDecimals) {
+        if(offerDecimals >= purchaseDecimals) {
             minContributionAmount = 10**(offerDecimals - purchaseDecimals);
         } else {
-            minContributionAmount = 10**(purchaseDecimals / 2);
+            minContributionAmount = 10**(purchaseDecimals - offerDecimals - 1);
         }
 
         require(
