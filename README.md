@@ -12,6 +12,7 @@ Listings created through this interface will pay a small fee for the listing, an
 # Development instructions
 
 --- Run **npm i** beforehand ---
+--- cp .env.example .env and set up the variables ---
 
 To compile:  
 **npx hardhat compile**  

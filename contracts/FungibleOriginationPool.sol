@@ -66,6 +66,8 @@ contract FungibleOriginationPool is
     uint256 public totalOfferingAmount;
     // need to raise this amount of purchase tokens for sale completion
     uint256 public reserveAmount;
+    // need to invest at least this amount to participate in the sale
+    uint256 public minContributionAmount;
     // the vesting period (can be 0)
     uint256 public vestingPeriod;
     // the vesting cliff period (must be <= vesting period)
@@ -118,6 +120,7 @@ contract FungibleOriginationPool is
     //--------------------------------------------------------------------------
 
     event InitiateSale(uint256 totalOfferingAmount);
+    event ManagerSet(address indexed manager);
     event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
     event Purchase(
         address indexed purchaser,
@@ -172,15 +175,23 @@ contract FungibleOriginationPool is
 
         offerToken = IERC20Metadata(_saleParams.offerToken);
         purchaseToken = IERC20Metadata(_saleParams.purchaseToken);
-        offerTokenDecimals = 10**offerToken.decimals();
-        purchaseTokenDecimals = _saleParams.purchaseToken == address(0)
-            ? 10**18
-            : 10**purchaseToken.decimals();
+        uint8 offerDecimals = offerToken.decimals();
+        uint8 purchaseDecimals = _saleParams.purchaseToken == address(0)
+            ? 18
+            : purchaseToken.decimals();
+        offerTokenDecimals = 10**offerDecimals;
+        purchaseTokenDecimals = 10**purchaseDecimals;
 
         publicStartingPrice = _saleParams.publicStartingPrice;
         publicEndingPrice = _saleParams.publicEndingPrice;
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
+
+        if(offerDecimals >= purchaseDecimals) {
+            minContributionAmount = 10**(offerDecimals - purchaseDecimals);
+        } else {
+            minContributionAmount = 10**(purchaseDecimals - offerDecimals - 1);
+        }
 
         require(
             _saleParams.publicSaleDuration <= MAX_SALE_DURATION,
@@ -248,7 +259,7 @@ contract FungibleOriginationPool is
             // If user has reached his limit completely revert
             require(
                 contributionAmount != 0,
-                "User has reached his max contribution amount"
+                "User has reached their max contribution amount"
             );
         }
 
@@ -273,7 +284,7 @@ contract FungibleOriginationPool is
             block.timestamp <= saleEndTimestamp,
             "Sale not started or over"
         );
-        require(contributionAmount > 0, "Must contribute");
+        require(contributionAmount >= minContributionAmount, "Need to contribute at least min contribution amount");
 
         address sender = msg.sender;
         if (address(purchaseToken) == address(0)) {
@@ -307,10 +318,7 @@ contract FungibleOriginationPool is
             // Modify token amount, contribution amount and fee amount
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
-            feeInPurchaseToken = _divUp(
-                contributionAmount - refundAmount,
-                1e18
-            );
+            feeInPurchaseToken = _divUp(contributionAmount, 1e18);
 
             // Indicate sale is over
             saleEndTimestamp = block.timestamp;
@@ -376,49 +384,48 @@ contract FungibleOriginationPool is
      * @param _nftIds The vesting entries ids
      */
     function claimVested(uint256[] calldata _nftIds) external nonReentrant {
-        require(block.timestamp > saleEndTimestamp, "Sale has not ended");
+        require(_nftIds.length > 0, "No vesting entry NFT id provided");
         require(
             saleEndTimestamp + cliffPeriod < block.timestamp,
             "Not past cliff period"
         );
+        require(purchaseTokensAcquired >= reserveAmount, "Sale reserve amount not met");
 
-        if (purchaseTokensAcquired >= reserveAmount) {
-            for (uint256 i = 0; i < _nftIds.length; i++) {
-                uint256 entryId = _nftIds[i];
-                (
-                    uint256 tokenAmount,
-                    uint256 tokenAmountClaimed
-                ) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
-                address ownerOfEntry = vestingEntryNFT.ownerOf(entryId);
-                require(
-                    ownerOfEntry == msg.sender,
-                    "User not owner of vest id"
-                ); 
-                require(
-                    tokenAmount != tokenAmountClaimed,
-                    "User has already claimed his token vesting"
-                );
+        for (uint256 i = 0; i < _nftIds.length; i++) {
+            uint256 entryId = _nftIds[i];
+            (
+                uint256 tokenAmount,
+                uint256 tokenAmountClaimed
+            ) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
+            address ownerOfEntry = vestingEntryNFT.ownerOf(entryId);
+            require(
+                ownerOfEntry == msg.sender,
+                "User not owner of vest id"
+            );
+            require(
+                tokenAmount != tokenAmountClaimed,
+                "User has already claimed their token vesting"
+            );
 
-                uint256 offerTokenPayout = calculateClaimableVestedAmount(
-                    tokenAmount,
-                    tokenAmountClaimed
-                );
-                uint256 tokenAmountRemaining = tokenAmount - tokenAmountClaimed;
-                vestingEntryNFT.setVestingAmounts(
-                    entryId,
-                    tokenAmount,
-                    tokenAmountClaimed + offerTokenPayout
-                );
+            uint256 offerTokenPayout = calculateClaimableVestedAmount(
+                tokenAmount,
+                tokenAmountClaimed
+            );
+            uint256 tokenAmountRemaining = tokenAmount - tokenAmountClaimed;
+            vestingEntryNFT.setVestingAmounts(
+                entryId,
+                tokenAmount,
+                tokenAmountClaimed + offerTokenPayout
+            );
 
-                offerToken.safeTransfer(msg.sender, offerTokenPayout);
-                vestableTokenAmount -= offerTokenPayout;
+            offerToken.safeTransfer(msg.sender, offerTokenPayout);
+            vestableTokenAmount -= offerTokenPayout;
 
-                emit ClaimVested(
-                    msg.sender,
-                    offerTokenPayout,
-                    tokenAmountRemaining
-                );
-            }
+            emit ClaimVested(
+                msg.sender,
+                offerTokenPayout,
+                tokenAmountRemaining
+            );
         }
     }
 
@@ -565,8 +572,13 @@ contract FungibleOriginationPool is
         uint256 tokenAmount,
         uint256 tokenAmountClaimed
     ) public view returns (uint256 claimableTokenAmount) {
-        uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
+        require(
+            saleEndTimestamp + cliffPeriod < block.timestamp,
+            "Not past cliff period"
+        );
 
+        uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
+        
         claimableTokenAmount = timeSinceInit >= vestingPeriod
             ? tokenAmount - tokenAmountClaimed
             : ((timeSinceInit * tokenAmount) / vestingPeriod) -
@@ -640,7 +652,6 @@ contract FungibleOriginationPool is
                 require(success);
                 // send fees to core
                 originationCore.receiveFees{value: originationCoreFees}();
-                require(success);
             } else {
                 claimAmount =
                     purchaseToken.balanceOf(address(this)) -
@@ -692,6 +703,7 @@ contract FungibleOriginationPool is
      */
     function setManager(address _manager) external onlyOwner {
         manager = _manager;
+        emit ManagerSet(manager);
     }
 
     //--------------------------------------------------------------------------
