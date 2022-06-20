@@ -97,20 +97,6 @@ describe("Fungible Pool state check right after deployment", async () => {
     await expect(originationPool.connect(user1).setManager(user2.address)).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
-  it("should not be able to check mintable tokens amount if before sale started or after sale is over", async () => {
-    await expect(originationPool.getCurrentMintAmount(ethers.utils.parseEther("1"))).to.be.revertedWith("Sale not started or over");
-    // initiate sale
-    await originationPool.initiateSale();
-
-    // call during sale
-    await advanceTime(43200);
-    await expect(originationPool.getCurrentMintAmount(ethers.utils.parseEther("1"))).to.not.be.reverted;
-
-    await advanceTime(86401);
-    // after sale is over
-    await expect(originationPool.getCurrentMintAmount(ethers.utils.parseEther("1"))).to.be.revertedWith("Sale not started or over");
-  });
-
   describe(".getCurrentMintAmount() output", async () => {
     it("standard price pool", async () => {
       await originationPool.initiateSale();

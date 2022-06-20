@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "./IOriginationCore.sol";
 
@@ -15,7 +15,7 @@ interface INonFungibleOriginationPool {
         uint256 maxMintablePerWhitelistedAddress;
         // the token used to purchase the nfts (can be eth)
         address purchaseToken;
-        // public sale starting price
+        // public sale starting price (1 NFT = publicStartingPrice purchase tokens)
         uint256 publicStartingPrice;
         // public sale end price
         uint256 publicEndingPrice;
@@ -36,7 +36,7 @@ interface INonFungibleOriginationPool {
     }
 
     function initialize(
-        uint256 originationFee,
+        uint256 originationFee, // 1e18 = 100% fee. 1e16 = 1% fee
         IOriginationCore core,
         address admin,
         SaleParams calldata saleParams
