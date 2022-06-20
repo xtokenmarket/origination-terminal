@@ -214,7 +214,7 @@ contract OriginationCore is
     }
 
     /**
-     * @notice Enable custom CLR pool deployment fee for a given address
+     * @notice Enable custom pool deployment fee for a given address
      * @param deployer address to enable fee for
      * @param feeAmount fee amount in eth
      */
@@ -222,16 +222,12 @@ contract OriginationCore is
         public
         onlyOwner
     {
-        require(
-            feeAmount < listingFee,
-            "Custom fee should be less than flat deployment fee"
-        );
         customListingFeeEnabled[deployer] = true;
         customListingFee[deployer] = feeAmount;
     }
 
     /**
-     * @notice Disable custom CLR pool deployment fee for a given address
+     * @notice Disable custom pool deployment fee for a given address
      * @param deployer address to disable fee for
      */
     function disableCustomListingFee(address deployer) public onlyOwner {
@@ -255,15 +251,17 @@ contract OriginationCore is
             );
             require(success);
         } else {
-            IERC20(_feeToken).transfer(
+            bool success = IERC20(_feeToken).transfer(
                 msg.sender,
                 IERC20(_feeToken).balanceOf(address(this))
             );
+            require(success);
         }
     }
 
     /**
-     * @dev Functions used by origination pools to receive the required fees
+     * @dev Function used by origination pools to send the origination fees to this contract
+     * @dev Only used after a token sale has finished successfully on claiming the tokens
      */
     function receiveFees() external payable override {}
 }

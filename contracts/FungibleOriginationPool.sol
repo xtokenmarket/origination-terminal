@@ -318,7 +318,7 @@ contract FungibleOriginationPool is
             // Modify token amount, contribution amount and fee amount
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
-            feeInPurchaseToken = _divUp(contributionAmount, 1e18);
+            feeInPurchaseToken = _divUp(contributionAmount * originationFee, 1e18);
 
             // Indicate sale is over
             saleEndTimestamp = block.timestamp;
