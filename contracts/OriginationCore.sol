@@ -1,11 +1,10 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 
 import "./interface/IPoolDeployer.sol";
 import "./interface/INFTDeployer.sol";
@@ -64,6 +63,8 @@ contract OriginationCore is
     event CreateFungibleListing(address indexed pool, address indexed owner);
     event CreateNonFungibleListing(address indexed pool, address indexed owner);
     event SetListingFee(uint256 fee);
+    event CustomListingFeeEnabled(address indexed deployer, uint256 customFee);
+    event CustomListingFeeDisabled(address indexed deployer);
 
     //--------------------------------------------------------------------------
     // Constructor / Initializer
@@ -140,7 +141,7 @@ contract OriginationCore is
         }
 
         // Set proxy admin
-        proxyAdmin.addProxyAdmin(originationPool, msg.sender);
+        proxyAdmin.setProxyAdmin(originationPool, msg.sender);
 
         // Initialize the proxy
         IFungibleOriginationPool(originationPool).initialize(
@@ -180,7 +181,7 @@ contract OriginationCore is
         );
 
         // Set proxy admin
-        proxyAdmin.addProxyAdmin(originationPool, msg.sender);
+        proxyAdmin.setProxyAdmin(originationPool, msg.sender);
 
         // Initialize the proxy
         INonFungibleOriginationPool(originationPool).initialize(
@@ -224,6 +225,7 @@ contract OriginationCore is
     {
         customListingFeeEnabled[deployer] = true;
         customListingFee[deployer] = feeAmount;
+        emit CustomListingFeeEnabled(deployer, feeAmount);
     }
 
     /**
@@ -232,6 +234,7 @@ contract OriginationCore is
      */
     function disableCustomListingFee(address deployer) public onlyOwner {
         customListingFeeEnabled[deployer] = false;
+        emit CustomListingFeeDisabled(deployer);
     }
 
     /**

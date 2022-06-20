@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "./IOriginationCore.sol";
 
@@ -7,7 +7,7 @@ interface IFungibleOriginationPool {
     struct SaleParams {
         address offerToken; // the token being offered for sale
         address purchaseToken; // the token used to purchase the offered token
-        uint256 publicStartingPrice; // in purchase tokens
+        uint256 publicStartingPrice; // in purchase tokens (10^OffrDec offer tokens = 10^PurchDecimals purch tokens)
         uint256 publicEndingPrice; // in purchase tokens
         uint256 whitelistStartingPrice; // in purchase tokens
         uint256 whitelistEndingPrice; // in purchase tokens
@@ -26,7 +26,7 @@ interface IFungibleOriginationPool {
     }
 
     function initialize(
-        uint256 originationFee,
+        uint256 originationFee, // 1e18 = 100% fee. 1e16 = 1% fee
         IOriginationCore core,
         address admin,
         address vestingEntryNFT,

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -31,7 +31,6 @@ contract FungibleOriginationPool is
     // Constants
     //--------------------------------------------------------------------------
 
-    uint256 constant TIME_PRECISION = 1e10;
     uint256 constant MAX_SALE_DURATION = 4 weeks;
 
     //--------------------------------------------------------------------------
@@ -42,10 +41,10 @@ contract FungibleOriginationPool is
     IERC20Metadata public offerToken;
     // the token used to purchase the offered token
     IERC20Metadata public purchaseToken;
-    // the amount of offer token decimals
-    uint256 private offerTokenDecimals;
-    // the amount of purchase token decimals
-    uint256 private purchaseTokenDecimals;
+    // equal to 10^offerTokenDecimals
+    uint256 private offerTokenUnits;
+    // equal to 10^purchaseTokenDecimals
+    uint256 private purchaseTokenUnits;
 
     // Token sale params
     // the public sale starting price (in purchase token)
@@ -121,6 +120,7 @@ contract FungibleOriginationPool is
 
     event InitiateSale(uint256 totalOfferingAmount);
     event ManagerSet(address indexed manager);
+    event WhitelistSet(bytes32 indexed whitelistMerkleRoot);
     event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
     event Purchase(
         address indexed purchaser,
@@ -179,15 +179,15 @@ contract FungibleOriginationPool is
         uint8 purchaseDecimals = _saleParams.purchaseToken == address(0)
             ? 18
             : purchaseToken.decimals();
-        offerTokenDecimals = 10**offerDecimals;
-        purchaseTokenDecimals = 10**purchaseDecimals;
+        offerTokenUnits = 10**offerDecimals;
+        purchaseTokenUnits = 10**purchaseDecimals;
 
         publicStartingPrice = _saleParams.publicStartingPrice;
         publicEndingPrice = _saleParams.publicEndingPrice;
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
-        if(offerDecimals >= purchaseDecimals) {
+        if (offerDecimals >= purchaseDecimals) {
             minContributionAmount = 10**(offerDecimals - purchaseDecimals);
         } else {
             minContributionAmount = 10**(purchaseDecimals - offerDecimals - 1);
@@ -248,14 +248,10 @@ contract FungibleOriginationPool is
             MerkleProof.verify(merkleProof, whitelistMerkleRoot, leaf),
             "Address not whitelisted"
         );
+        uint256 currentContribution = purchaseTokenContribution[msg.sender];
         // If contribution amount is exceeded invest as much as possible
-        if (
-            purchaseTokenContribution[msg.sender] + contributionAmount >
-            maxContributionAmount
-        ) {
-            contributionAmount =
-                maxContributionAmount -
-                purchaseTokenContribution[msg.sender];
+        if (currentContribution + contributionAmount > maxContributionAmount) {
+            contributionAmount = maxContributionAmount - currentContribution;
             // If user has reached his limit completely revert
             require(
                 contributionAmount != 0,
@@ -284,23 +280,26 @@ contract FungibleOriginationPool is
             block.timestamp <= saleEndTimestamp,
             "Sale not started or over"
         );
-        require(contributionAmount >= minContributionAmount, "Need to contribute at least min contribution amount");
+        require(
+            contributionAmount >= minContributionAmount,
+            "Need to contribute at least min contribution amount"
+        );
 
-        address sender = msg.sender;
         if (address(purchaseToken) == address(0)) {
             // purchase token is eth
             require(msg.value == contributionAmount);
         } else {
             purchaseToken.safeTransferFrom(
-                sender,
+                msg.sender,
                 address(this),
                 contributionAmount
             );
         }
 
         uint256 offerTokenAmount = getCurrentMintAmount(contributionAmount);
-        uint256 feeInPurchaseToken = _divUp(
-            contributionAmount * originationFee,
+        uint256 feeInPurchaseToken = _mulDiv(
+            contributionAmount,
+            originationFee,
             1e18
         );
 
@@ -318,15 +317,19 @@ contract FungibleOriginationPool is
             // Modify token amount, contribution amount and fee amount
             contributionAmount -= refundAmount;
             offerTokenAmount = totalOfferingAmount - offerTokenAmountSold;
-            feeInPurchaseToken = _divUp(contributionAmount * originationFee, 1e18);
+            feeInPurchaseToken = _mulDiv(
+                contributionAmount,
+                originationFee,
+                1e18
+            );
 
             // Indicate sale is over
             saleEndTimestamp = block.timestamp;
         }
 
         // Update the sale trackers
-        offerTokenAmountPurchased[sender] += offerTokenAmount;
-        purchaseTokenContribution[sender] += contributionAmount;
+        offerTokenAmountPurchased[msg.sender] += offerTokenAmount;
+        purchaseTokenContribution[msg.sender] += contributionAmount;
         offerTokenAmountSold += offerTokenAmount;
         purchaseTokensAcquired += contributionAmount;
         originationCoreFees += feeInPurchaseToken;
@@ -338,11 +341,11 @@ contract FungibleOriginationPool is
         );
 
         if (vestingPeriod > 0) {
-            _createVestingEntry(sender, offerTokenAmount);
+            _createVestingEntry(msg.sender, offerTokenAmount);
         }
 
         emit Purchase(
-            sender,
+            msg.sender,
             contributionAmount,
             offerTokenAmount,
             feeInPurchaseToken
@@ -389,19 +392,17 @@ contract FungibleOriginationPool is
             saleEndTimestamp + cliffPeriod < block.timestamp,
             "Not past cliff period"
         );
-        require(purchaseTokensAcquired >= reserveAmount, "Sale reserve amount not met");
+        require(
+            purchaseTokensAcquired >= reserveAmount,
+            "Sale reserve amount not met"
+        );
 
         for (uint256 i = 0; i < _nftIds.length; i++) {
             uint256 entryId = _nftIds[i];
-            (
-                uint256 tokenAmount,
-                uint256 tokenAmountClaimed
-            ) = vestingEntryNFT.tokenIdVestingAmounts(entryId);
+            (uint256 tokenAmount, uint256 tokenAmountClaimed) = vestingEntryNFT
+                .tokenIdVestingAmounts(entryId);
             address ownerOfEntry = vestingEntryNFT.ownerOf(entryId);
-            require(
-                ownerOfEntry == msg.sender,
-                "User not owner of vest id"
-            );
+            require(ownerOfEntry == msg.sender, "User not owner of vest id");
             require(
                 tokenAmount != tokenAmountClaimed,
                 "User has already claimed their token vesting"
@@ -489,22 +490,15 @@ contract FungibleOriginationPool is
         view
         returns (uint256 offerTokenAmount)
     {
-        require(
-            block.timestamp <= saleEndTimestamp,
-            "Sale not started or over"
-        );
-
         uint256 offerTokenPrice = getOfferTokenPrice();
 
         // following line has 2 operations:
         //    1. Convert contribution amount to Offer Tokens (contribution / price)
         //    2. Convert previous operation from purchase token decimals to offer token decimals
-        offerTokenAmount = _divUp(
-            _divUp(
-                contributionAmount * purchaseTokenDecimals,
-                offerTokenPrice
-            ) * offerTokenDecimals,
-            purchaseTokenDecimals
+        offerTokenAmount = _mulDiv(
+            _mulDiv(contributionAmount, purchaseTokenUnits, offerTokenPrice),
+            offerTokenUnits,
+            purchaseTokenUnits
         );
     }
 
@@ -518,17 +512,12 @@ contract FungibleOriginationPool is
         view
         returns (uint256 purchaseAmount)
     {
-        require(
-            block.timestamp <= saleEndTimestamp,
-            "Sale not started or over"
-        );
-
         uint256 offerTokenPrice = getOfferTokenPrice();
 
-        purchaseAmount = _divUp(
-            _divUp(offerAmount * offerTokenPrice, purchaseTokenDecimals) *
-                purchaseTokenDecimals,
-            offerTokenDecimals
+        purchaseAmount = _mulDiv(
+            _mulDiv(offerAmount, offerTokenPrice, purchaseTokenUnits),
+            purchaseTokenUnits,
+            offerTokenUnits
         );
     }
 
@@ -540,6 +529,15 @@ contract FungibleOriginationPool is
         view
         returns (uint256 offerTokenPrice)
     {
+        // Token sale was not initiated yet
+        if (!saleInitiated) {
+            return whitelistSaleDuration > 0 ? whitelistStartingPrice : publicStartingPrice;
+        }
+
+        // Token sale has ended
+        if (block.timestamp > saleEndTimestamp) {
+            return publicSaleDuration > 0 ? publicEndingPrice : whitelistEndingPrice;
+        }
         uint256 timeElapsed = block.timestamp - saleInitiatedTimestamp;
         // Whitelist mint period has different start and end prices
         uint256 _startingPrice = isWhitelistMintPeriod()
@@ -548,17 +546,13 @@ contract FungibleOriginationPool is
         uint256 _endingPrice = isWhitelistMintPeriod()
             ? whitelistEndingPrice
             : publicEndingPrice;
-        // Get the start / end price difference
-        uint256 saleRange = _startingPrice < _endingPrice
-            ? _endingPrice - _startingPrice
-            : _startingPrice - _endingPrice;
-        uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) /
-            timeElapsed;
-        uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
-        // Determine the offer token price in purchase tokens
-        offerTokenPrice = _startingPrice < _endingPrice
-            ? _startingPrice + saleDelta
-            : _startingPrice - saleDelta;
+
+       return
+            (_startingPrice *
+                (saleDuration - timeElapsed) +
+                _endingPrice *
+                timeElapsed) /
+            saleDuration;
     }
 
     /**
@@ -578,7 +572,7 @@ contract FungibleOriginationPool is
         );
 
         uint256 timeSinceInit = block.timestamp - saleEndTimestamp;
-        
+
         claimableTokenAmount = timeSinceInit >= vestingPeriod
             ? tokenAmount - tokenAmountClaimed
             : ((timeSinceInit * tokenAmount) / vestingPeriod) -
@@ -693,6 +687,7 @@ contract FungibleOriginationPool is
         require(!saleInitiated, "Cannot set whitelist after sale initiated");
 
         whitelistMerkleRoot = _whitelistMerkleRoot;
+        emit WhitelistSet(_whitelistMerkleRoot);
     }
 
     /**
@@ -710,10 +705,106 @@ contract FungibleOriginationPool is
     // Utils Functions
     //--------------------------------------------------------------------------
 
-    /**
-     * @dev Divides num by div, rounding up
-     */
-    function _divUp(uint256 num, uint256 div) internal pure returns (uint256) {
-        return (num + div - 1) / div;
+    /// @notice Calculates floor(a×b÷denominator) with full precision.
+    /// @notice Throws if result overflows a uint256 or denominator == 0
+    /// @param a The multiplicand
+    /// @param b The multiplier
+    /// @param denominator The divisor
+    /// @return result The 256-bit result
+    /// @dev Credit to Remco Bloemen under MIT license https://xn--2-umb.com/21/muldiv
+    function _mulDiv(
+        uint256 a,
+        uint256 b,
+        uint256 denominator
+    ) internal pure returns (uint256 result) {
+        // 512-bit multiply [prod1 prod0] = a * b
+        // Compute the product mod 2**256 and mod 2**256 - 1
+        // then use the Chinese Remainder Theorem to reconstruct
+        // the 512 bit result. The result is stored in two 256
+        // variables such that product = prod1 * 2**256 + prod0
+        uint256 prod0; // Least significant 256 bits of the product
+        uint256 prod1; // Most significant 256 bits of the product
+        assembly {
+            let mm := mulmod(a, b, not(0))
+            prod0 := mul(a, b)
+            prod1 := sub(sub(mm, prod0), lt(mm, prod0))
+        }
+
+        // Handle non-overflow cases, 256 by 256 division
+        if (prod1 == 0) {
+            require(denominator > 0);
+            assembly {
+                result := div(prod0, denominator)
+            }
+            return result;
+        }
+
+        // Make sure the result is less than 2**256.
+        // Also prevents denominator == 0
+        require(denominator > prod1);
+
+        ///////////////////////////////////////////////
+        // 512 by 256 division.
+        ///////////////////////////////////////////////
+
+        // Make division exact by subtracting the remainder from [prod1 prod0]
+        // Compute remainder using mulmod
+        uint256 remainder;
+        assembly {
+            remainder := mulmod(a, b, denominator)
+        }
+        // Subtract 256 bit number from 512 bit number
+        assembly {
+            prod1 := sub(prod1, gt(remainder, prod0))
+            prod0 := sub(prod0, remainder)
+        }
+
+        // Factor powers of two out of denominator
+        // Compute largest power of two divisor of denominator.
+        // Always >= 1.
+        unchecked {
+            uint256 twos = (type(uint256).max - denominator + 1) & denominator;
+            // Divide denominator by power of two
+            assembly {
+                denominator := div(denominator, twos)
+            }
+
+            // Divide [prod1 prod0] by the factors of two
+            assembly {
+                prod0 := div(prod0, twos)
+            }
+            // Shift in bits from prod1 into prod0. For this we need
+            // to flip `twos` such that it is 2**256 / twos.
+            // If twos is zero, then it becomes one
+            assembly {
+                twos := add(div(sub(0, twos), twos), 1)
+            }
+            prod0 |= prod1 * twos;
+
+            // Invert denominator mod 2**256
+            // Now that denominator is an odd number, it has an inverse
+            // modulo 2**256 such that denominator * inv = 1 mod 2**256.
+            // Compute the inverse by starting with a seed that is correct
+            // correct for four bits. That is, denominator * inv = 1 mod 2**4
+            uint256 inv = (3 * denominator) ^ 2;
+            // Now use Newton-Raphson iteration to improve the precision.
+            // Thanks to Hensel's lifting lemma, this also works in modular
+            // arithmetic, doubling the correct bits in each step.
+            inv *= 2 - denominator * inv; // inverse mod 2**8
+            inv *= 2 - denominator * inv; // inverse mod 2**16
+            inv *= 2 - denominator * inv; // inverse mod 2**32
+            inv *= 2 - denominator * inv; // inverse mod 2**64
+            inv *= 2 - denominator * inv; // inverse mod 2**128
+            inv *= 2 - denominator * inv; // inverse mod 2**256
+
+            // Because the division is now exact we can divide by multiplying
+            // with the modular inverse of denominator. This will give us the
+            // correct result modulo 2**256. Since the precoditions guarantee
+            // that the outcome is less than 2**256, this is the final result.
+            // We don't need to compute the high bits of the result and prod1
+            // is no longer required.
+            result = prod0 * inv;
+            return result;
+        }
     }
 }
