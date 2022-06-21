@@ -118,10 +118,22 @@ contract FungibleOriginationPool is
     // Events
     //--------------------------------------------------------------------------
 
+    // Management events
     event InitiateSale(uint256 totalOfferingAmount);
     event ManagerSet(address indexed manager);
     event WhitelistSet(bytes32 indexed whitelistMerkleRoot);
+    // Token retrieval events
+    event PurchaseTokensRetrieved(address indexed user, uint256 amountRetrieved);
+    event OfferTokensRetrieved(address indexed owner, uint256 amountRetrieved);
+    // Token claim events
     event PurchaseTokenClaim(address indexed owner, uint256 amountClaimed);
+    event TokensClaimed(address indexed user, uint256 amountClaimed);
+    event ClaimVested(
+        address indexed purchaser,
+        uint256 tokenAmountClaimed,
+        uint256 tokenAmountRemaining
+    );
+    // Token purchase events
     event Purchase(
         address indexed purchaser,
         uint256 contributionAmount,
@@ -132,11 +144,6 @@ contract FungibleOriginationPool is
         address indexed purchaser,
         uint256 vestingId,
         uint256 offerTokenAmount
-    );
-    event ClaimVested(
-        address indexed purchaser,
-        uint256 tokenAmountClaimed,
-        uint256 tokenAmountRemaining
     );
 
     //--------------------------------------------------------------------------
@@ -451,6 +458,7 @@ contract FungibleOriginationPool is
             tokenAmount = offerTokenAmountPurchased[msg.sender];
             offerTokenAmountPurchased[msg.sender] = 0;
             offerToken.safeTransfer(msg.sender, tokenAmount);
+            emit TokensClaimed(msg.sender, tokenAmount);
         } else {
             // Sale did not reach reserve amount therefore return purchase tokens
             require(
@@ -460,6 +468,7 @@ contract FungibleOriginationPool is
             tokenAmount = purchaseTokenContribution[msg.sender];
             purchaseTokenContribution[msg.sender] = 0;
             _returnPurchaseTokens(msg.sender, tokenAmount);
+            emit PurchaseTokensRetrieved(msg.sender, tokenAmount);
         }
     }
 
@@ -668,10 +677,12 @@ contract FungibleOriginationPool is
             emit PurchaseTokenClaim(owner(), claimAmount);
         } else {
             // return all offer tokens back to owner
+            uint256 retrieveAmount = offerToken.balanceOf(address(this));
             offerToken.safeTransfer(
                 owner(),
-                offerToken.balanceOf(address(this))
+                retrieveAmount
             );
+            emit OfferTokensRetrieved(owner(), retrieveAmount);
         }
     }
 
