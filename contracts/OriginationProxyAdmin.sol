@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -13,6 +13,12 @@ contract OriginationProxyAdmin is Ownable {
     // Mapping of proxy to admin of proxy
     // Proxy admins can upgrade the proxy or change the admin
     mapping(address => address) proxyAdmins;
+
+    event ProxyOwnershipTransferred(
+        address indexed proxy,
+        address indexed oldOwner,
+        address indexed newOwner
+    );
 
     /**
      * @dev Returns the current implementation of `proxy`.
@@ -60,7 +66,6 @@ contract OriginationProxyAdmin is Ownable {
 
     /**
      * @dev Transfer ownership of proxy to another address
-     * @dev Used on deployment of CLR and staked token proxies
      *
      * Requirements:
      * - The caller must be admin of the *proxy*
@@ -75,6 +80,7 @@ contract OriginationProxyAdmin is Ownable {
     {
         require(newAdmin != address(0x0), "Admin cannot be the zero address");
         proxyAdmins[proxy] = newAdmin;
+        emit ProxyOwnershipTransferred(proxy, msg.sender, newAdmin);
     }
 
     /**
@@ -112,8 +118,9 @@ contract OriginationProxyAdmin is Ownable {
 
     /**
      * Add proxy admin to a given proxy
+     * Called only by the owner once on pool deployment
      */
-    function addProxyAdmin(address proxy, address admin) external onlyOwner {
+    function setProxyAdmin(address proxy, address admin) external onlyOwner {
         proxyAdmins[proxy] = admin;
     }
 

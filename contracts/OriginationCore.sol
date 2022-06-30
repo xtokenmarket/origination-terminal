@@ -1,11 +1,10 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 
 import "./interface/IPoolDeployer.sol";
 import "./interface/INFTDeployer.sol";
@@ -64,6 +63,8 @@ contract OriginationCore is
     event CreateFungibleListing(address indexed pool, address indexed owner);
     event CreateNonFungibleListing(address indexed pool, address indexed owner);
     event SetListingFee(uint256 fee);
+    event CustomListingFeeEnabled(address indexed deployer, uint256 customFee);
+    event CustomListingFeeDisabled(address indexed deployer);
 
     //--------------------------------------------------------------------------
     // Constructor / Initializer
@@ -140,7 +141,7 @@ contract OriginationCore is
         }
 
         // Set proxy admin
-        proxyAdmin.addProxyAdmin(originationPool, msg.sender);
+        proxyAdmin.setProxyAdmin(originationPool, msg.sender);
 
         // Initialize the proxy
         IFungibleOriginationPool(originationPool).initialize(
@@ -180,7 +181,7 @@ contract OriginationCore is
         );
 
         // Set proxy admin
-        proxyAdmin.addProxyAdmin(originationPool, msg.sender);
+        proxyAdmin.setProxyAdmin(originationPool, msg.sender);
 
         // Initialize the proxy
         INonFungibleOriginationPool(originationPool).initialize(
@@ -214,7 +215,7 @@ contract OriginationCore is
     }
 
     /**
-     * @notice Enable custom CLR pool deployment fee for a given address
+     * @notice Enable custom pool deployment fee for a given address
      * @param deployer address to enable fee for
      * @param feeAmount fee amount in eth
      */
@@ -222,20 +223,18 @@ contract OriginationCore is
         public
         onlyOwner
     {
-        require(
-            feeAmount < listingFee,
-            "Custom fee should be less than flat deployment fee"
-        );
         customListingFeeEnabled[deployer] = true;
         customListingFee[deployer] = feeAmount;
+        emit CustomListingFeeEnabled(deployer, feeAmount);
     }
 
     /**
-     * @notice Disable custom CLR pool deployment fee for a given address
+     * @notice Disable custom pool deployment fee for a given address
      * @param deployer address to disable fee for
      */
     function disableCustomListingFee(address deployer) public onlyOwner {
         customListingFeeEnabled[deployer] = false;
+        emit CustomListingFeeDisabled(deployer);
     }
 
     /**
@@ -255,15 +254,17 @@ contract OriginationCore is
             );
             require(success);
         } else {
-            IERC20(_feeToken).transfer(
+            bool success = IERC20(_feeToken).transfer(
                 msg.sender,
                 IERC20(_feeToken).balanceOf(address(this))
             );
+            require(success);
         }
     }
 
     /**
-     * @dev Functions used by origination pools to receive the required fees
+     * @dev Function used by origination pools to send the origination fees to this contract
+     * @dev Only used after a token sale has finished successfully on claiming the tokens
      */
     function receiveFees() external payable override {}
 }

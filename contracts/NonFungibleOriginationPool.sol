@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.4;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -23,10 +23,6 @@ contract NonFungibleOriginationPool is
     ReentrancyGuardUpgradeable
 {
     using SafeERC20 for IERC20;
-    //--------------------------------------------------------------------------
-    // Constants
-    //--------------------------------------------------------------------------
-    uint256 constant TIME_PRECISION = 1e10;
 
     // the token used to purchase the offered token (can be eth)
     IERC20 public purchaseToken;
@@ -88,6 +84,7 @@ contract NonFungibleOriginationPool is
 
     event InitiateSale(uint256 saleInitiatedTimestamp);
     event ManagerSet(address indexed manager);
+    event WhitelistSet(bytes32 indexed whitelistMerkleRoot);
     event Minted(
         address indexed minter,
         uint256 nftAmount,
@@ -250,6 +247,7 @@ contract NonFungibleOriginationPool is
         require(!saleInitiated, "Cannot set whitelist after sale initiated");
 
         whitelistMerkleRoot = _whitelistMerkleRoot;
+        emit WhitelistSet(_whitelistMerkleRoot);
     }
 
     /**
@@ -331,16 +329,12 @@ contract NonFungibleOriginationPool is
             ? whitelistEndingPrice
             : publicEndingPrice;
 
-        uint256 saleRange = periodStartingPrice < periodEndingPrice
-            ? periodEndingPrice - periodStartingPrice
-            : periodStartingPrice - periodEndingPrice;
-        uint256 saleCompletionRatio = (saleDuration * TIME_PRECISION) /
-            timeElapsed;
-        uint256 saleDelta = (saleRange * TIME_PRECISION) / saleCompletionRatio;
-
-        mintPrice = periodStartingPrice < periodEndingPrice
-            ? periodStartingPrice + saleDelta
-            : periodStartingPrice - saleDelta;
+        mintPrice =
+            (periodStartingPrice *
+                (saleDuration - timeElapsed) +
+                periodEndingPrice *
+                timeElapsed) /
+            saleDuration;
     }
 
     function isWhitelistMintPeriod() public view returns (bool) {

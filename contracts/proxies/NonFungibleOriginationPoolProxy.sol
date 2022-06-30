@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.2;
 
 import "./TransparentUpgradeableProxy.sol";
 import "../interface/IPoolDeployer.sol";
@@ -55,8 +55,8 @@ contract NonFungibleOriginationPoolProxy is TransparentUpgradeableProxy {
 
     function upgradeTo(address _implementation) external override ifAdmin {
         require(
-            IPoolDeployer(_poolDeployer()).nonFungibleOriginationPoolImplementation() ==
-                _implementation,
+            IPoolDeployer(_poolDeployer())
+                .nonFungibleOriginationPoolImplementation() == _implementation,
             "Can only upgrade to latest nonFungibleOriginationPool implementation"
         );
         _upgradeTo(_implementation);
@@ -69,11 +69,10 @@ contract NonFungibleOriginationPoolProxy is TransparentUpgradeableProxy {
         ifAdmin
     {
         require(
-            IPoolDeployer(_poolDeployer()).nonFungibleOriginationPoolImplementation() ==
-                _implementation,
+            IPoolDeployer(_poolDeployer())
+                .nonFungibleOriginationPoolImplementation() == _implementation,
             "Can only upgrade to latest nonFungibleOriginationPool implementation"
         );
-        _upgradeTo(_implementation);
-        Address.functionDelegateCall(_implementation, data);
+        _upgradeToAndCall(_implementation, data, true);
     }
 }

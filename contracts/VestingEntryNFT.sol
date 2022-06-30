@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "./interface/IVestingEntryNFT.sol";
@@ -15,6 +15,12 @@ contract VestingEntryNFT is ERC721Upgradeable, IVestingEntryNFT {
     mapping(uint256 => VestingAmounts) public tokenIdVestingAmounts;
 
     address public pool; // erc-20 token pool which mints the nfts
+
+    event VestingAmountSet(
+        uint256 indexed entryId,
+        uint256 tokenAmount,
+        uint256 tokenAmountClaimed
+    );
 
     //--------------------------------------------------------------------------
     // Constructor / Initializer
@@ -44,8 +50,13 @@ contract VestingEntryNFT is ERC721Upgradeable, IVestingEntryNFT {
         uint256 tokenId,
         VestingAmounts memory vestingAmounts
     ) external override onlyPool {
-        _mint(to, tokenId);
+        _safeMint(to, tokenId);
         tokenIdVestingAmounts[tokenId] = vestingAmounts;
+        emit VestingAmountSet(
+            tokenId,
+            vestingAmounts.tokenAmount,
+            vestingAmounts.tokenAmountClaimed
+        );
     }
 
     function setVestingAmounts(
@@ -57,10 +68,14 @@ contract VestingEntryNFT is ERC721Upgradeable, IVestingEntryNFT {
             tokenAmount: tokenAmount,
             tokenAmountClaimed: tokenAmountClaimed
         });
+        emit VestingAmountSet(tokenId, tokenAmount, tokenAmountClaimed);
     }
 
     modifier onlyPool() {
-        require(msg.sender == pool, "Only pool can interact with vesting entries");
+        require(
+            msg.sender == pool,
+            "Only pool can interact with vesting entries"
+        );
         _;
     }
 }
