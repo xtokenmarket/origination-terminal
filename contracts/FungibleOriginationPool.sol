@@ -194,10 +194,11 @@ contract FungibleOriginationPool is
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
+        uint256 maxSalePrice = publicEndingPrice >= publicStartingPrice ? publicEndingPrice : publicStartingPrice;
         if (offerDecimals >= purchaseDecimals) {
-            minContributionAmount = 10**(offerDecimals - purchaseDecimals);
+            minContributionAmount = maxSalePrice <= purchaseTokenUnits ? 1 : _mulDiv(maxSalePrice, 1, purchaseTokenUnits) + 1;
         } else {
-            minContributionAmount = 10**(purchaseDecimals - offerDecimals - 1);
+            minContributionAmount = maxSalePrice < offerTokenUnits ? 1 : _mulDiv(maxSalePrice, 1, offerTokenUnits);
         }
 
         require(

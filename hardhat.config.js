@@ -11,16 +11,16 @@ require("solidity-coverage");
 require("dotenv").config();
 
 const alchemy = {
-  mainnet: 'https://eth-mainnet.alchemyapi.io/v2/',
-  arbitrum: 'https://arb-mainnet.g.alchemy.com/v2/',
-  optimism: 'https://opt-mainnet.g.alchemy.com/v2/',
-  polygon: 'https://polygon-mainnet.g.alchemy.com/v2/',
-  goerli: 'https://eth-goerli.alchemyapi.io/v2/'
-}
+  mainnet: "https://eth-mainnet.alchemyapi.io/v2/",
+  arbitrum: "https://arb-mainnet.g.alchemy.com/v2/",
+  optimism: "https://opt-mainnet.g.alchemy.com/v2/",
+  polygon: "https://polygon-mainnet.g.alchemy.com/v2/",
+  goerli: "https://eth-goerli.alchemyapi.io/v2/",
+};
 
 const key = process.env.ALCHEMY_KEY;
-if(!key) {
-  console.log('please set your ALCHEMY_KEY in .env');
+if (!key) {
+  console.log("please set your ALCHEMY_KEY in .env");
   return;
 }
 
@@ -62,10 +62,13 @@ module.exports = {
     goerli: {
       url: alchemy.goerli + key,
       accounts: [process.env.ADMIN_PRIVATE_KEY, process.env.ADMIN_2_PRIVATE_KEY],
-    }
+    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
+  },
+  mocha: {
+    timeout: 120000, // 2 minutes
   },
   solidity: {
     version: "0.8.15",
