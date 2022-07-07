@@ -65,8 +65,10 @@ contract FungibleOriginationPool is
     uint256 public totalOfferingAmount;
     // need to raise this amount of purchase tokens for sale completion
     uint256 public reserveAmount;
-    // need to invest at least this amount to participate in the sale
-    uint256 public minContributionAmount;
+    // need to invest at least this amount to participate in the whitelist sale
+    uint256 public minWhitelistContributionAmount;
+    // need to invest at least this amount to participate in the public sale
+    uint256 public minPublicContributionAmount;
     // the vesting period (can be 0)
     uint256 public vestingPeriod;
     // the vesting cliff period (must be <= vesting period)
@@ -194,11 +196,14 @@ contract FungibleOriginationPool is
         whitelistStartingPrice = _saleParams.whitelistStartingPrice;
         whitelistEndingPrice = _saleParams.whitelistEndingPrice;
 
-        uint256 maxSalePrice = publicEndingPrice >= publicStartingPrice ? publicEndingPrice : publicStartingPrice;
+        uint256 maxWhitelistSalePrice = whitelistEndingPrice >= whitelistStartingPrice ? whitelistEndingPrice : whitelistStartingPrice;
+        uint256 maxPublicSalePrice = publicEndingPrice >= publicStartingPrice ? publicEndingPrice : publicStartingPrice;
         if (offerDecimals >= purchaseDecimals) {
-            minContributionAmount = maxSalePrice <= purchaseTokenUnits ? 1 : _mulDiv(maxSalePrice, 1, purchaseTokenUnits) + 1;
+            minWhitelistContributionAmount = maxWhitelistSalePrice <= purchaseTokenUnits ? 1 : _mulDiv(maxWhitelistSalePrice, 1, purchaseTokenUnits) + 1;
+            minPublicContributionAmount = maxPublicSalePrice <= purchaseTokenUnits ? 1 : _mulDiv(maxPublicSalePrice, 1, purchaseTokenUnits) + 1;
         } else {
-            minContributionAmount = maxSalePrice < offerTokenUnits ? 1 : _mulDiv(maxSalePrice, 1, offerTokenUnits);
+            minWhitelistContributionAmount = maxWhitelistSalePrice < offerTokenUnits ? 1 : _mulDiv(maxWhitelistSalePrice, 1, offerTokenUnits);
+            minPublicContributionAmount = maxPublicSalePrice < offerTokenUnits ? 1 : _mulDiv(maxPublicSalePrice, 1, offerTokenUnits);
         }
 
         require(
@@ -289,7 +294,7 @@ contract FungibleOriginationPool is
             "Sale not started or over"
         );
         require(
-            contributionAmount >= minContributionAmount,
+            contributionAmount >= getMinContributionAmount(),
             "Need to contribute at least min contribution amount"
         );
 
@@ -587,6 +592,10 @@ contract FungibleOriginationPool is
             ? tokenAmount - tokenAmountClaimed
             : ((timeSinceInit * tokenAmount) / vestingPeriod) -
                 tokenAmountClaimed;
+    }
+
+    function getMinContributionAmount() public view returns (uint256) {
+        return isWhitelistMintPeriod() ? minWhitelistContributionAmount : minPublicContributionAmount;
     }
 
     function isWhitelistMintPeriod() public view returns (bool) {

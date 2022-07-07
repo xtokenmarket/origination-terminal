@@ -133,7 +133,7 @@ const getPools_OFFR_lt_PRCH = async (useLowPriceValue = false) => {
   return pools;
 };
 
-xdescribe("Min contribution should be correctly calculated", () => {
+describe.only("Min contribution should be correctly calculated", () => {
   before(async () => {
     [deployer, user, user1] = await ethers.getSigners();
 
@@ -150,12 +150,12 @@ xdescribe("Min contribution should be correctly calculated", () => {
     describe("OFFR decimals >= PRCH decimals; higher price", () => {
       OFFR_gte_PRCH_price_high.forEach(({ offerTokenUnits, purchaseTokenUnits, originationPool, priceStringified }) => {
         it(`OFFR(${offerTokenUnits} decimals);PRCH(${purchaseTokenUnits} decimals);Price - ${priceStringified} PRCH per OFFR`, async () => {
-          const amountIn = await originationPool.minContributionAmount();
+          const amountIn = await originationPool.getMinContributionAmount();
           const mintAmount = await originationPool.getCurrentMintAmount(amountIn);
           const minMintAmount = ethers.utils.parseUnits("1", offerTokenUnits - purchaseTokenUnits);
 
           console.log(`\n\tPRCH(${purchaseTokenUnits} decimals) & OFFR(${offerTokenUnits} decimals)`);
-          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.minContributionAmount(), purchaseTokenUnits), "PRCH");
+          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.getMinContributionAmount(), purchaseTokenUnits), "PRCH");
           console.log("\tCurrent price:", ethers.utils.formatUnits(await originationPool.publicStartingPrice(), purchaseTokenUnits), "PRCH");
           console.log("\tMint amount for min contribution:", ethers.utils.formatUnits(mintAmount, offerTokenUnits), "OFFR\n");
 
@@ -168,12 +168,12 @@ xdescribe("Min contribution should be correctly calculated", () => {
     describe("OFFR decimals >= PRCH decimals; low price", async () => {
       OFFR_gte_PRCH_price_low.forEach(({ offerTokenUnits, purchaseTokenUnits, originationPool, priceStringified }) => {
         it(`OFFR(${offerTokenUnits} decimals);PRCH(${purchaseTokenUnits} decimals);Price - ${priceStringified} PRCH per OFFR`, async () => {
-          const amountIn = await originationPool.minContributionAmount();
+          const amountIn = await originationPool.getMinContributionAmount();
           const mintAmount = await originationPool.getCurrentMintAmount(amountIn);
           const expectedMintAmount = ethers.utils.parseUnits("1", offerTokenUnits);
 
           console.log(`\n\tPRCH(${purchaseTokenUnits} decimals) & OFFR(${offerTokenUnits} decimals)`);
-          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.minContributionAmount(), purchaseTokenUnits), "PRCH");
+          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.getMinContributionAmount(), purchaseTokenUnits), "PRCH");
           console.log("\tCurrent price:", ethers.utils.formatUnits(await originationPool.publicStartingPrice(), purchaseTokenUnits), "PRCH");
           console.log("\tMint amount for min contribution:", ethers.utils.formatUnits(mintAmount, offerTokenUnits), "OFFR\n");
 
@@ -186,12 +186,12 @@ xdescribe("Min contribution should be correctly calculated", () => {
     describe("OFFR decimals < PRCH decimals; high price", async () => {
       OFFR_lt_PRCH_price_high.forEach(({ offerTokenUnits, purchaseTokenUnits, originationPool, priceStringified }) => {
         it(`OFFR(${offerTokenUnits} decimals);PRCH(${purchaseTokenUnits} decimals);Price - ${priceStringified} PRCH per OFFR`, async () => {
-          const amountIn = await originationPool.minContributionAmount();
+          const amountIn = await originationPool.getMinContributionAmount();
           const mintAmount = await originationPool.getCurrentMintAmount(amountIn);
           const minMintAmount = ethers.utils.parseUnits("1", 0);
 
           console.log(`\n\tPRCH(${purchaseTokenUnits} decimals) & OFFR(${offerTokenUnits} decimals)`);
-          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.minContributionAmount(), purchaseTokenUnits), "PRCH");
+          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.getMinContributionAmount(), purchaseTokenUnits), "PRCH");
           console.log("\tCurrent price:", ethers.utils.formatUnits(await originationPool.publicStartingPrice(), purchaseTokenUnits), "PRCH");
           console.log("\tMint amount for min contribution:", ethers.utils.formatUnits(mintAmount, offerTokenUnits), "OFFR\n");
 
@@ -203,12 +203,12 @@ xdescribe("Min contribution should be correctly calculated", () => {
     describe("OFFR decimals < PRCH decimals; lower price", async () => {
       OFFR_lt_PRCH_price_low.forEach(({ offerTokenUnits, purchaseTokenUnits, originationPool, priceStringified }) => {
         it(`OFFR(${offerTokenUnits} decimals);PRCH(${purchaseTokenUnits} decimals);Price - ${priceStringified} PRCH per OFFR`, async () => {
-          const amountIn = await originationPool.minContributionAmount();
+          const amountIn = await originationPool.getMinContributionAmount();
           const mintAmount = await originationPool.getCurrentMintAmount(amountIn);
           const expectedMintAmount = ethers.utils.parseUnits("1", offerTokenUnits);
 
           console.log(`\n\tPRCH(${purchaseTokenUnits} decimals) & OFFR(${offerTokenUnits} decimals)`);
-          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.minContributionAmount(), purchaseTokenUnits), "PRCH");
+          console.log("\tMin contribution amount:", ethers.utils.formatUnits(await originationPool.getMinContributionAmount(), purchaseTokenUnits), "PRCH");
           console.log("\tCurrent price:", ethers.utils.formatUnits(await originationPool.publicStartingPrice(), purchaseTokenUnits), "PRCH");
           console.log("\tMint amount for min contribution:", ethers.utils.formatUnits(mintAmount, offerTokenUnits), "OFFR\n");
 
