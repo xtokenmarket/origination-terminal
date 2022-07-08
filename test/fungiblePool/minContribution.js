@@ -133,7 +133,7 @@ const getPools_OFFR_lt_PRCH = async (useLowPriceValue = false) => {
   return pools;
 };
 
-describe.only("Min contribution should be correctly calculated", () => {
+xdescribe("Min contribution should be correctly calculated", () => {
   before(async () => {
     [deployer, user, user1] = await ethers.getSigners();
 
