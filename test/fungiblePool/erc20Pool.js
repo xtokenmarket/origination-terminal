@@ -84,10 +84,9 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
     let minContributionAmount = await originationPool.minContributionAmount();
 
     let purchaseTokenDecimals = await purchaseToken.decimals();
-    let offerTokenDecimals = await offerToken.decimals();
 
     // min contribution amount is equal to purchase token decimals / 2
-    let expectedMinContributionAmount = bn(10).pow(bn(purchaseTokenDecimals - offerTokenDecimals - 1));
+    let expectedMinContributionAmount = bn(10).pow(bn(purchaseTokenDecimals / 2));
 
     expect(minContributionAmount).to.be.eq(expectedMinContributionAmount);
 
@@ -186,9 +185,7 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
     let minContributionAmount = await originationPoolDecimals.minContributionAmount();
 
     let purchaseTokenDecimals = await purchaseTokenDecimalsLower.decimals();
-    let offerTokenDecimals = await offerToken.decimals();
-    // expected min contribution amount = 10 ^ (offer token decimals - purchase token decimals)
-    let expectedMinContributionAmount = bn(10).pow(bn(offerTokenDecimals).sub(purchaseTokenDecimals));
+    let expectedMinContributionAmount = bn(10).pow(purchaseTokenDecimals / 2);
 
     expect(minContributionAmount).to.be.eq(expectedMinContributionAmount);
 
