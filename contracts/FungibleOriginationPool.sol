@@ -325,7 +325,10 @@ contract FungibleOriginationPool is
                 originationFee,
                 1e18
             );
-
+        } 
+        
+        // Check if total offering amount is reached with current contribution
+        if(offerTokenAmountSold + offerTokenAmount == totalOfferingAmount) {
             // Indicate sale is over
             saleEndTimestamp = block.timestamp;
         }
