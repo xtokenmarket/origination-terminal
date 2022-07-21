@@ -279,10 +279,7 @@ contract FungibleOriginationPool is
 
     function _purchase(uint256 contributionAmount) internal nonReentrant {
         require(saleInitiated, "Sale not open");
-        require(
-            block.timestamp <= saleEndTimestamp,
-            "Sale not started or over"
-        );
+        require(block.timestamp <= saleEndTimestamp, "Sale over");
         require(
             contributionAmount >= minContributionAmount,
             "Need to contribute at least min contribution amount"
@@ -327,18 +324,18 @@ contract FungibleOriginationPool is
             );
         } 
         
-        // Check if total offering amount is reached with current contribution
-        if(offerTokenAmountSold + offerTokenAmount == totalOfferingAmount) {
-            // Indicate sale is over
-            saleEndTimestamp = block.timestamp;
-        }
-
         // Update the sale trackers
         offerTokenAmountPurchased[msg.sender] += offerTokenAmount;
         purchaseTokenContribution[msg.sender] += contributionAmount;
         offerTokenAmountSold += offerTokenAmount;
         purchaseTokensAcquired += contributionAmount;
         originationCoreFees += feeInPurchaseToken;
+
+        // Check if total offering amount is reached with current contribution
+        if(offerTokenAmountSold == totalOfferingAmount) {
+            // Indicate sale is over
+            saleEndTimestamp = block.timestamp;
+        }
 
         // Make sure offer token amount sold is not greater than the sale offering
         require(

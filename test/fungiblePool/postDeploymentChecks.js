@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { advanceTime } = require("../utils");
+const { advanceTime, getCurrentTimestamp } = require("../utils");
 const createFixture = require("./fungibleFixture");
 
 const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -15,6 +15,7 @@ describe("Fungible Pool state check right after deployment", async () => {
       originationPool,
       originationPoolAscending,
       originationPoolDescending,
+      originationPoolWhitelistOnly,
       originationPoolWhitelist,
       originationPoolDecimals,
       rootHash,
@@ -71,7 +72,7 @@ describe("Fungible Pool state check right after deployment", async () => {
 
   // before sale initialization check
   it("should not allow investors to whitelistPurchase tokens", async () => {
-    await expect(originationPool.connect(user1).whitelistPurchase(userProof, ethers.utils.parseEther("1"), whitelist[user.address])).to.be.revertedWith(
+    await expect(originationPool.connect(user1).whitelistPurchase(userProof, ethers.utils.parseEther("1"), whitelist[user1.address])).to.be.revertedWith(
       "Not whitelist period"
     );
   });
@@ -100,7 +101,7 @@ describe("Fungible Pool state check right after deployment", async () => {
   describe(".getCurrentMintAmount() output", async () => {
     it("standard price pool", async () => {
       await originationPool.initiateSale();
-      advanceTime(1);
+      await advanceTime(1);
 
       const amountIn = ethers.utils.parseEther("1");
       const tokenPrice = await originationPool.publicStartingPrice();
@@ -144,7 +145,7 @@ describe("Fungible Pool state check right after deployment", async () => {
   describe(".getPurchaseAmountFromOfferAmount() output", async () => {
     it("standard price pool", async () => {
       await originationPool.initiateSale();
-      advanceTime(1);
+      await advanceTime(1);
 
       const expectedPurchaseAmount = ethers.utils.parseEther("1");
       const tokenPrice = await originationPool.publicStartingPrice();
@@ -186,9 +187,32 @@ describe("Fungible Pool state check right after deployment", async () => {
   });
 
   describe(".getOfferTokenPrice() output", async () => {
-    it("standard price pool", async () => {
+    it("whitelist only pool", async () => {
+      await originationPoolWhitelistOnly.initiateSale();
+      await advanceTime(1);
+
+      const expectedOfferTokenPrice = await originationPoolWhitelistOnly.whitelistStartingPrice();
+      expect(await originationPoolWhitelistOnly.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
+
+      const saleEndTimestamp = await originationPoolWhitelistOnly.saleEndTimestamp();
+      const currentBlockNumber = await ethers.provider.getBlockNumber();
+      const currentTimestamp = (await ethers.provider.getBlock(currentBlockNumber)).timestamp;
+
+      // saleEndTimestamp exactly reached
+      await advanceTime(saleEndTimestamp - currentTimestamp + 1);
+
+      // offer token price shouldn't change
+      expect(await originationPoolWhitelistOnly.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
+
+      // Sale is over
+      await expect(originationPoolWhitelistOnly.connect(user1).whitelistPurchase(userProof, 1, whitelist[user1.address])).to.be.revertedWith(
+        "Not whitelist period"
+      );
+    });
+
+    it("standard price pool - half of sale", async () => {
       await originationPool.initiateSale();
-      advanceTime(1);
+      await advanceTime(1);
 
       const expectedOfferTokenPrice = await originationPool.publicStartingPrice();
       expect(await originationPool.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
@@ -198,7 +222,7 @@ describe("Fungible Pool state check right after deployment", async () => {
       expect(await originationPool.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
     });
 
-    it("ascending price pool", async () => {
+    it("ascending price pool - half of sale", async () => {
       await originationPoolAscending.initiateSale();
       const publicStartingPrice = await originationPoolAscending.publicStartingPrice();
       const publicEndingPrice = await originationPoolAscending.publicEndingPrice();
@@ -209,7 +233,7 @@ describe("Fungible Pool state check right after deployment", async () => {
       expect(await originationPoolAscending.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
     });
 
-    it("descending price pool", async () => {
+    it("descending price pool - half of sale", async () => {
       await originationPoolDescending.initiateSale();
       const publicStartingPrice = await originationPoolDescending.publicStartingPrice();
       const publicEndingPrice = await originationPoolDescending.publicEndingPrice();
@@ -218,6 +242,109 @@ describe("Fungible Pool state check right after deployment", async () => {
 
       await advanceTime(43201); // 12 hours (half way through sale)
       expect(await originationPoolDescending.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
+    });
+
+    it("standard price pool - sale ended", async () => {
+      await originationPool.initiateSale();
+      await advanceTime(1);
+
+      const expectedOfferTokenPrice = await originationPool.publicStartingPrice();
+      expect(await originationPool.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
+
+      const saleEndTimestamp = await originationPool.saleEndTimestamp();
+      const currentTimestamp = await getCurrentTimestamp();
+
+      // saleEndTimestamp exactly reached
+      await advanceTime(saleEndTimestamp - currentTimestamp + 1);
+
+      // offer token price shouldn't change
+      expect(await originationPool.getOfferTokenPrice()).to.equal(expectedOfferTokenPrice);
+
+      // Sale is over
+      await expect(originationPool.connect(user1).purchase(1)).to.be.revertedWith("Not public mint period");
+    });
+
+    it("ascending price pool - sale ended", async () => {
+      await originationPoolAscending.initiateSale();
+      await advanceTime(1);
+
+      const publicStartingPrice = await originationPoolAscending.publicStartingPrice();
+      const publicEndingPrice = await originationPoolAscending.publicEndingPrice();
+
+      expect(await originationPool.getOfferTokenPrice()).to.equal(publicStartingPrice);
+
+      const saleEndTimestamp = await originationPoolAscending.saleEndTimestamp();
+      const currentTimestamp = await getCurrentTimestamp();
+
+      // saleEndTimestamp exactly reached
+      await advanceTime(saleEndTimestamp - currentTimestamp + 1);
+
+      // offer token price should have the sale ending price
+      expect(await originationPoolAscending.getOfferTokenPrice()).to.equal(publicEndingPrice);
+
+      // Sale is over
+      await expect(originationPoolAscending.connect(user1).purchase(1)).to.be.revertedWith("Not public mint period");
+    });
+
+    it("descending price pool - sale ended", async () => {
+      await originationPoolDescending.initiateSale();
+
+      const publicStartingPrice = await originationPoolDescending.publicStartingPrice();
+      const publicEndingPrice = await originationPoolDescending.publicEndingPrice();
+
+      expect(await originationPoolDescending.getOfferTokenPrice()).to.equal(publicStartingPrice);
+
+      await advanceTime(1);
+
+      const saleEndTimestamp = await originationPoolDescending.saleEndTimestamp();
+      const currentTimestamp = await getCurrentTimestamp();
+
+      // saleEndTimestamp exactly reached
+      await advanceTime(saleEndTimestamp - currentTimestamp + 1);
+
+      // offer token price should have the sale ending price
+      expect(await originationPoolDescending.getOfferTokenPrice()).to.equal(publicEndingPrice);
+
+      // Sale is over
+      await expect(originationPoolDescending.connect(user1).purchase(1)).to.be.revertedWith("Not public mint period");
+    });
+  });
+
+  describe(".isWhitelistMintPeriod() & .isPublicMintPeriod() outputs", () => {
+    it("Ensure sale mint periods are correctly delimited", async () => {
+      await originationPoolWhitelist.initiateSale();
+      await advanceTime(1);
+
+      const saleInitatedTimestamp = await originationPoolWhitelist.saleInitiatedTimestamp();
+
+      expect(await originationPoolWhitelist.isWhitelistMintPeriod()).to.be.true;
+      expect(await originationPoolWhitelist.isPublicMintPeriod()).to.be.false;
+      expect(await getCurrentTimestamp()).to.equal(saleInitatedTimestamp.add(1));
+
+      // whitelist sale period upper limit
+      const whitelistSaleDuration = await originationPoolWhitelist.whitelistSaleDuration();
+      await advanceTime(whitelistSaleDuration);
+      expect(await originationPoolWhitelist.isWhitelistMintPeriod()).to.be.true;
+      expect(await originationPoolWhitelist.isPublicMintPeriod()).to.be.false;
+
+      // start public sale period
+      await advanceTime(1);
+      expect(await originationPoolWhitelist.isWhitelistMintPeriod()).to.be.false;
+      expect(await originationPoolWhitelist.isPublicMintPeriod()).to.be.true;
+      const publicSaleStartTimestamp = saleInitatedTimestamp.add(whitelistSaleDuration).add(1);
+      expect(await getCurrentTimestamp()).to.equal(publicSaleStartTimestamp);
+
+      // public sale period upper limit
+      const publicSaleDuration = await originationPoolWhitelist.publicSaleDuration();
+      await advanceTime(publicSaleDuration);
+      expect(await originationPoolWhitelist.isWhitelistMintPeriod()).to.be.false;
+      expect(await originationPoolWhitelist.isPublicMintPeriod()).to.be.true;
+
+      // exceed public sale period
+      await advanceTime(1);
+      expect(await originationPoolWhitelist.isWhitelistMintPeriod()).to.be.false;
+      expect(await originationPoolWhitelist.isPublicMintPeriod()).to.be.false;
+      expect(await getCurrentTimestamp()).to.equal(publicSaleStartTimestamp.add(publicSaleDuration));
     });
   });
 });

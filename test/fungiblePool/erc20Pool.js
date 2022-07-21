@@ -332,7 +332,31 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
     expect(purchaseAmountSpent).to.be.eq(bigPurchaseAmount.sub(refundAmount));
   });
 
-  it("should end sale if offer token amount is reached", async () => {
+  it("should end sale if offer token amount is exactly reached", async () => {
+    // disable whitelist
+    await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
+    const totalOfferingAmount = await originationPool.totalOfferingAmount();
+
+    // initiate sale
+    await originationPool.initiateSale();
+
+    // offerToken = token out
+    // purchaseToken = token in
+    const offerBalanceBefore = await offerToken.balanceOf(user.address);
+    expect(offerBalanceBefore).to.equal(0);
+
+    await increaseTime(1);
+    // Get the purchase token amount required to buy all offered tokens
+    let purchaseTokenAmount = await originationPool.getPurchaseAmountFromOfferAmount(totalOfferingAmount);
+
+    const tx = await originationPool.connect(user).purchase(purchaseTokenAmount);
+    const callTimestamp = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
+
+    expect(await originationPool.saleEndTimestamp()).to.eq(callTimestamp);
+    await expect(originationPool.connect(user).purchase(1)).to.be.revertedWith("Sale over");
+  });
+
+  it("should end sale if offer token amount is exceeded", async () => {
     // disable whitelist
     await originationPool.setWhitelist(ethers.utils.formatBytes32String("0"));
     const totalOfferingAmount = ethers.utils.parseUnits("1000000", 10); // selling a total of 1m
@@ -345,17 +369,17 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
     const offerBalanceBefore = await offerToken.balanceOf(user.address);
     expect(offerBalanceBefore).to.equal(0);
 
-    const purchaseBalanceBefore = await purchaseToken.balanceOf(user.address);
-
     await increaseTime(1);
     // Get the purchase token amount required to buy all offered tokens
     let purchaseTokenAmount = await originationPool.getPurchaseAmountFromOfferAmount(totalOfferingAmount);
 
     // purchase exceeds sale ceiling by 10%
     let bigPurchaseAmount = purchaseTokenAmount.add(purchaseTokenAmount.div(10));
-    await originationPool.connect(user).purchase(bigPurchaseAmount);
+    const tx = await originationPool.connect(user).purchase(bigPurchaseAmount);
+    const callTimestamp = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
 
-    await expect(originationPool.connect(user).purchase(1)).to.be.revertedWith("Sale not started or over");
+    expect(await originationPool.saleEndTimestamp()).to.eq(callTimestamp);
+    await expect(originationPool.connect(user).purchase(1)).to.be.revertedWith("Sale over");
   });
 
   it("should be able to claim tokens if offer token amount is reached", async () => {
