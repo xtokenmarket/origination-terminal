@@ -353,6 +353,11 @@ contract FungibleOriginationPool is
             offerTokenAmount,
             feeInPurchaseToken
         );
+
+        if (vestingPeriod == 0 && reserveAmount == 0) {
+            // immediately distribute offer tokens
+            _claimPurchasedOfferTokens(msg.sender);
+        }
     }
 
     /**
@@ -440,32 +445,39 @@ contract FungibleOriginationPool is
     function claimTokens() external nonReentrant {
         require(block.timestamp > saleEndTimestamp, "Sale has not ended");
 
-        uint256 tokenAmount;
         if (purchaseTokensAcquired >= reserveAmount) {
             // Sale reached the reserve amount therefore send acquired offer tokens
-            require(
-                offerTokenAmountPurchased[msg.sender] > 0,
-                "No purchase made"
-            );
             require(
                 vestingPeriod == 0,
                 "Tokens must be claimed using claimVested"
             );
-            tokenAmount = offerTokenAmountPurchased[msg.sender];
-            offerTokenAmountPurchased[msg.sender] = 0;
-            offerToken.safeTransfer(msg.sender, tokenAmount);
-            emit TokensClaimed(msg.sender, tokenAmount);
+            // No vesting period and no reserve amount - offer tokens already distributed
+            require(reserveAmount > 0, "Tokens already claimed once purchased");
+
+            _claimPurchasedOfferTokens(msg.sender);
         } else {
             // Sale did not reach reserve amount therefore return purchase tokens
             require(
                 purchaseTokenContribution[msg.sender] > 0,
                 "No contribution made"
             );
-            tokenAmount = purchaseTokenContribution[msg.sender];
+            uint256 tokenAmount = purchaseTokenContribution[msg.sender];
             purchaseTokenContribution[msg.sender] = 0;
             _returnPurchaseTokens(msg.sender, tokenAmount);
             emit PurchaseTokensRetrieved(msg.sender, tokenAmount);
         }
+    }
+
+    function _claimPurchasedOfferTokens(address purchaser) internal {
+        require(
+            offerTokenAmountPurchased[purchaser] > 0,
+            "No purchase made"
+        );
+
+        uint256 tokenAmount = offerTokenAmountPurchased[purchaser];
+        offerTokenAmountPurchased[purchaser] = 0;
+        offerToken.safeTransfer(purchaser, tokenAmount);
+        emit TokensClaimed(purchaser, tokenAmount);
     }
 
     function _returnPurchaseTokens(address purchaser, uint256 tokenAmount)
