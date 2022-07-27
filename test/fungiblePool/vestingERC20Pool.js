@@ -307,6 +307,40 @@ describe("Fungible token sale vesting", async () => {
     expect(userVestingEntry.tokenAmountClaimed).to.be.eq(0);
   });
 
+  it("should not mint vesting entry for zero pruchased offer amount - total offering amount is already reached", async () => {
+    const totalOfferingAmount = await originationPoolVesting.totalOfferingAmount();
+    const poolNFTAddress = await originationPoolVesting.vestingEntryNFT();
+    const poolNFT = await ethers.getContractAt("VestingEntryNFT", poolNFTAddress);
+
+    // initiate sale
+    await originationPoolVesting.initiateSale();
+
+    await increaseTime(1);
+    // Get the purchase token amount required to buy all offered tokens
+    const purchaseTokenAmount = await originationPoolVesting.getPurchaseAmountFromOfferAmount(totalOfferingAmount);
+
+    // Purchase all offer tokens
+    const tx = await originationPoolVesting.connect(user).purchase(purchaseTokenAmount);
+    const callTimestamp = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
+
+    // Get the vesting id
+    const userVestingId = await originationPoolVesting.userToVestingId(user.address);
+
+    const ownerOfNFT = await poolNFT.ownerOf(userVestingId);
+    expect(ownerOfNFT).to.be.eq(user.address);
+
+    const userVestingEntry = await poolNFT.tokenIdVestingAmounts(userVestingId);
+
+    expect(userVestingEntry.tokenAmount).to.be.eq(totalOfferingAmount);
+    expect(userVestingEntry.tokenAmountClaimed).to.be.eq(0);
+
+    // Try purchase again
+    await expect(originationPoolVesting.connect(user).purchase(ethers.utils.parseEther("1"))).to.be.revertedWith("Sale over");
+
+    expect(await originationPoolVesting.saleEndTimestamp()).to.eq(callTimestamp);
+    expect(await originationPoolVesting.userToVestingId(user.address)).to.eq(userVestingId);
+  });
+
   it("user should be able to transfer nft and claim vesting from another address", async () => {
     const amountIn = ethers.utils.parseEther("1");
 

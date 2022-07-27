@@ -351,6 +351,42 @@ const createFixture = deployments.createFixture(async () => {
   await offerToken.approve(originationPoolWhitelist.address, ethers.utils.parseUnits("1000000", 10));
   await offerToken.connect(user).approve(originationPoolWhitelist.address, ethers.utils.parseUnits("1000000", 10));
 
+  // ***deploy test case where purchase token are not ETH
+  // ***and only whitelist sale is enabled
+  // create listing
+  tx = await originationCore.createFungibleListing(
+    {
+      offerToken: offerToken.address,
+      purchaseToken: purchaseToken.address,
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
+      whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
+      whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
+      publicSaleDuration: 0,
+      whitelistSaleDuration: 86400, // duration of 24 hours
+      totalOfferingAmount: totalOfferingAmount,
+      reserveAmount: saleThreshold,
+      vestingPeriod: vestingPeriod,
+      cliffPeriod: cliffPeriod,
+    },
+    { value: listingFee }
+  );
+
+  // listing to event for pool address
+  receipt = await tx.wait();
+  eventListing = await receipt.events.find((e) => e.event === "CreateFungibleListing");
+  originationPoolAddress = eventListing.args[0];
+
+  // get origination pool contract
+  const originationPoolWhitelistOnly = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
+  await originationPoolWhitelistOnly.setWhitelist(rootHash);
+
+  // token approvals
+  await purchaseToken.approve(originationPoolWhitelistOnly.address, ethers.utils.parseEther("10000000000"));
+  await purchaseToken.connect(user).approve(originationPoolWhitelistOnly.address, ethers.utils.parseEther("10000000000"));
+  await offerToken.approve(originationPoolWhitelistOnly.address, ethers.utils.parseUnits("1000000", 10));
+  await offerToken.connect(user).approve(originationPoolWhitelistOnly.address, ethers.utils.parseUnits("1000000", 10));
+
   // ***deploy test case where purchase token is ETH
   // create listing
   tx = await originationCore.createFungibleListing(
@@ -394,6 +430,7 @@ const createFixture = deployments.createFixture(async () => {
     nonFungibleOriginationPoolUpgrade,
     originationPool,
     originationPoolETH,
+    originationPoolWhitelistOnly,
     originationPoolWhitelist,
     originationPoolETHWhitelist,
     originationPoolDecimals,
