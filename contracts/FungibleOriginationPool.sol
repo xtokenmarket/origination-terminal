@@ -444,6 +444,10 @@ contract FungibleOriginationPool is
      */
     function claimTokens() external nonReentrant {
         require(block.timestamp > saleEndTimestamp, "Sale has not ended");
+        require(
+            vestingPeriod != 0 || reserveAmount != 0, 
+            "Tokens already claimed once purchased"
+        );
 
         if (purchaseTokensAcquired >= reserveAmount) {
             // Sale reached the reserve amount therefore send acquired offer tokens
@@ -451,8 +455,6 @@ contract FungibleOriginationPool is
                 vestingPeriod == 0,
                 "Tokens must be claimed using claimVested"
             );
-            // No vesting period and no reserve amount - offer tokens already distributed
-            require(reserveAmount > 0, "Tokens already claimed once purchased");
 
             _claimPurchasedOfferTokens(msg.sender);
         } else {
@@ -643,6 +645,45 @@ contract FungibleOriginationPool is
         emit InitiateSale(totalOfferingAmount);
     }
 
+    function claimPurchaseTokenNoReserveNoVesting() external onlyOwnerOrManager {
+        require(
+            vestingPeriod == 0 && reserveAmount == 0,
+            "Tokens must be claimed using claimPurchaseToken"
+        );
+
+        uint256 claimAmount;
+        if (address(purchaseToken) == address(0)) {
+            // purchaseToken = eth
+            claimAmount = address(this).balance - originationCoreFees;
+            (bool success, ) = owner().call{value: claimAmount}("");
+            require(success);
+            // send fees to core
+            originationCore.receiveFees{value: originationCoreFees}();
+        } else {
+            claimAmount =
+                purchaseToken.balanceOf(address(this)) -
+                originationCoreFees;
+            purchaseToken.safeTransfer(owner(), claimAmount);
+            purchaseToken.safeTransfer(
+                address(originationCore),
+                originationCoreFees
+            );
+        }
+        // reset accrued origination fees amount
+        originationCoreFees = 0;
+
+        // return the unsold offerTokens
+        // if sale has ended
+        if (block.timestamp > saleEndTimestamp && offerTokenAmountSold < totalOfferingAmount) {
+            offerToken.safeTransfer(
+                owner(),
+                totalOfferingAmount - offerTokenAmountSold
+            );
+        }
+        
+        emit PurchaseTokenClaim(owner(), claimAmount);
+    }
+
     /**
      * @dev Admin function to claim the purchase tokens from the sale
      * @dev Can only claim at the conclusion of the sale
@@ -650,6 +691,10 @@ contract FungibleOriginationPool is
      */
     function claimPurchaseToken() external onlyOwnerOrManager {
         require(block.timestamp > saleEndTimestamp, "Sale has not ended");
+        require(
+            vestingPeriod != 0 || reserveAmount != 0, 
+            "Tokens must be claimed using claimPurchaseTokenNoReserveNoVesting"
+        );
         require(!sponsorTokensClaimed, "Tokens already claimed");
         sponsorTokensClaimed = true;
 

@@ -456,6 +456,39 @@ const createFixture = deployments.createFixture(async () => {
   await offerToken.approve(originationPoolETHWhitelist.address, ethers.utils.parseUnits("1000000", 10));
   await offerToken.connect(user).approve(originationPoolETHWhitelist.address, ethers.utils.parseUnits("1000000", 10));
 
+  // ***deploy test case where purchase token is ETH - no reserve and no vesting
+  // create listing
+  tx = await originationCore.createFungibleListing(
+    {
+      offerToken: offerToken.address,
+      purchaseToken: ethers.constants.AddressZero,
+      publicStartingPrice: offerPricePerPurchaseToken, // starting price
+      publicEndingPrice: offerPricePerPurchaseToken, // ending price
+      whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
+      whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
+      publicSaleDuration: 86400, // duration of 24 hours
+      whitelistSaleDuration: 0,
+      totalOfferingAmount: totalOfferingAmount,
+      reserveAmount: 0,
+      vestingPeriod: 0,
+      cliffPeriod: 0,
+    },
+    { value: listingFee }
+  );
+
+  // listing to event for pool address
+  receipt = await tx.wait();
+  eventListing = await receipt.events.find((e) => e.event === "CreateFungibleListing");
+  originationPoolAddress = eventListing.args[0];
+
+  // get origination pool contract
+  const originationPoolETHNoReserveNoVesting = await ethers.getContractAt("FungibleOriginationPool", originationPoolAddress);
+  await originationPoolETHNoReserveNoVesting.setWhitelist(rootHash);
+
+  // token approvals
+  await offerToken.approve(originationPoolETHNoReserveNoVesting.address, ethers.utils.parseUnits("1000000", 10));
+  await offerToken.connect(user).approve(originationPoolETHNoReserveNoVesting.address, ethers.utils.parseUnits("1000000", 10));
+
   return {
     accounts,
     originationCore,
@@ -473,6 +506,7 @@ const createFixture = deployments.createFixture(async () => {
     originationPoolAscending,
     originationPoolDescending,
     originationPoolNoReserveNoVesting,
+    originationPoolETHNoReserveNoVesting,
     originationPoolVesting,
     originationPoolVestingDecimals,
     rootHash,
