@@ -188,23 +188,6 @@ describe("Management functions", async () => {
   });
 
   describe("No reserve amount and no vesting period set", async () => {
-    it("should not be able to claim purchase tokens using claimPurchaseToken()", async () => {
-      // disable whitelist
-      await originationPoolNoReserveNoVesting.setWhitelist(ethers.utils.formatBytes32String("0"));
-
-      // you will receive 10x the amount you put in
-      const amountIn = ethers.utils.parseEther("1");
-
-      // initiate sale
-      await originationPoolNoReserveNoVesting.initiateSale();
-
-      await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
-      await advanceTime(86401);
-      await expect(originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseToken()).to.be.revertedWith(
-        "Tokens must be claimed using claimPurchaseTokenNoReserveNoVesting"
-      );
-    });
-
     it("should be able claim purchase tokens during sale", async () => {
       // initiate sale
       await originationPoolNoReserveNoVesting.initiateSale();
@@ -218,7 +201,7 @@ describe("Management functions", async () => {
       await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
       // half of sale period
       await advanceTime(43201);
-      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting();
+      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseToken();
 
       const purchaseBalanceAfter = await purchaseToken.balanceOf(deployer.address);
 
@@ -238,7 +221,7 @@ describe("Management functions", async () => {
       await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
       // half of sale period
       await advanceTime(86401);
-      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting();
+      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseToken();
 
       const purchaseBalanceAfter = await purchaseToken.balanceOf(deployer.address);
 
@@ -258,13 +241,13 @@ describe("Management functions", async () => {
       await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
       // half of sale period
       await advanceTime(43201);
-      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting();
+      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseToken();
 
       expect(await offerToken.balanceOf(deployer.address)).to.eq(offerBalanceBefore);
 
       // end of sale period
       await advanceTime(43201);
-      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting();
+      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseToken();
 
       const amountSold = await originationPoolNoReserveNoVesting.offerTokenAmountSold();
       const offerBalanceAfter = await offerToken.balanceOf(deployer.address);
@@ -286,7 +269,7 @@ describe("Management functions", async () => {
       await advanceTime(43201);
 
       expect(await originationPoolNoReserveNoVesting.originationCoreFees()).to.equal(originationCoreFee);
-      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting();
+      await originationPoolNoReserveNoVesting.connect(deployer).claimPurchaseToken();
 
       // tracked fees amount reset - fees sent to origination core
       expect(await originationPoolNoReserveNoVesting.originationCoreFees()).to.equal(0);
@@ -310,14 +293,14 @@ describe("Management functions", async () => {
       await advanceTime(43201);
 
       const originationCoreFees = await originationPoolETHNoReserveNoVesting.originationCoreFees();
-      await expect(await originationPoolETHNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting()).to.changeEtherBalance(
+      await expect(await originationPoolETHNoReserveNoVesting.connect(deployer).claimPurchaseToken()).to.changeEtherBalance(
         deployer,
         amountIn.sub(originationCoreFees)
       );
       // end of sale period
       await advanceTime(43201);
 
-      await originationPoolETHNoReserveNoVesting.connect(deployer).claimPurchaseTokenNoReserveNoVesting();
+      await originationPoolETHNoReserveNoVesting.connect(deployer).claimPurchaseToken();
       const amountSold = await originationPoolETHNoReserveNoVesting.offerTokenAmountSold();
       const offerBalanceAfter = await offerToken.balanceOf(deployer.address);
       const offeringAmount = await originationPoolETHNoReserveNoVesting.totalOfferingAmount();

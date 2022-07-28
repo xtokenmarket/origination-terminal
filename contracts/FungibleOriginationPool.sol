@@ -645,79 +645,42 @@ contract FungibleOriginationPool is
         emit InitiateSale(totalOfferingAmount);
     }
 
-    function claimPurchaseTokenNoReserveNoVesting() external onlyOwnerOrManager {
-        require(
-            vestingPeriod == 0 && reserveAmount == 0,
-            "Tokens must be claimed using claimPurchaseToken"
-        );
-
-        uint256 claimAmount;
-        if (address(purchaseToken) == address(0)) {
-            // purchaseToken = eth
-            claimAmount = address(this).balance - originationCoreFees;
-            (bool success, ) = owner().call{value: claimAmount}("");
-            require(success);
-            // send fees to core
-            originationCore.receiveFees{value: originationCoreFees}();
-        } else {
-            claimAmount =
-                purchaseToken.balanceOf(address(this)) -
-                originationCoreFees;
-            purchaseToken.safeTransfer(owner(), claimAmount);
-            purchaseToken.safeTransfer(
-                address(originationCore),
-                originationCoreFees
-            );
-        }
-        // reset accrued origination fees amount
-        originationCoreFees = 0;
-
-        // return the unsold offerTokens
-        // if sale has ended
-        if (block.timestamp > saleEndTimestamp && offerTokenAmountSold < totalOfferingAmount) {
-            offerToken.safeTransfer(
-                owner(),
-                totalOfferingAmount - offerTokenAmountSold
-            );
-        }
-        
-        emit PurchaseTokenClaim(owner(), claimAmount);
-    }
-
     /**
      * @dev Admin function to claim the purchase tokens from the sale
      * @dev Can only claim at the conclusion of the sale
      * @dev Returns unsold offer tokens or all offer tokens if reserve amount was not met
      */
     function claimPurchaseToken() external onlyOwnerOrManager {
+        if (vestingPeriod == 0 && reserveAmount == 0) {
+            // purchase tokens can be claimed even if the sale has not ended
+            _transferPurchaseTokenToOwner();
+
+            // reset accrued origination fees amount
+            originationCoreFees = 0;
+
+            // return the unsold offerTokens
+            // if the sale has ended
+            if (
+                block.timestamp > saleEndTimestamp && 
+                offerTokenAmountSold < totalOfferingAmount
+            ) {
+                offerToken.safeTransfer(
+                    owner(),
+                    totalOfferingAmount - offerTokenAmountSold
+                );
+            }
+
+            // end execution
+            return;
+        }
+
         require(block.timestamp > saleEndTimestamp, "Sale has not ended");
-        require(
-            vestingPeriod != 0 || reserveAmount != 0, 
-            "Tokens must be claimed using claimPurchaseTokenNoReserveNoVesting"
-        );
         require(!sponsorTokensClaimed, "Tokens already claimed");
         sponsorTokensClaimed = true;
 
         // check if reserve amount was reached
         if (purchaseTokensAcquired >= reserveAmount) {
-            uint256 claimAmount;
-            if (address(purchaseToken) == address(0)) {
-                // purchaseToken = eth
-                claimAmount = address(this).balance - originationCoreFees;
-                (bool success, ) = owner().call{value: claimAmount}("");
-                require(success);
-                // send fees to core
-                originationCore.receiveFees{value: originationCoreFees}();
-            } else {
-                claimAmount =
-                    purchaseToken.balanceOf(address(this)) -
-                    originationCoreFees;
-                purchaseToken.safeTransfer(owner(), claimAmount);
-                purchaseToken.safeTransfer(
-                    address(originationCore),
-                    originationCoreFees
-                );
-            }
+           _transferPurchaseTokenToOwner();
 
             // return the unsold offerTokens
             if (offerTokenAmountSold < totalOfferingAmount) {
@@ -726,8 +689,6 @@ contract FungibleOriginationPool is
                     totalOfferingAmount - offerTokenAmountSold
                 );
             }
-
-            emit PurchaseTokenClaim(owner(), claimAmount);
         } else {
             // return all offer tokens back to owner
             uint256 retrieveAmount = offerToken.balanceOf(address(this));
@@ -763,6 +724,29 @@ contract FungibleOriginationPool is
     function setManager(address _manager) external onlyOwner {
         manager = _manager;
         emit ManagerSet(manager);
+    }
+
+    function _transferPurchaseTokenToOwner() internal {
+        uint256 transferAmount;
+        if (address(purchaseToken) == address(0)) {
+            // purchaseToken = eth
+            transferAmount = address(this).balance - originationCoreFees;
+            (bool success, ) = owner().call{value: transferAmount}("");
+            require(success);
+            // send fees to core
+            originationCore.receiveFees{value: originationCoreFees}();
+        } else {
+            transferAmount =
+                purchaseToken.balanceOf(address(this)) -
+                originationCoreFees;
+            purchaseToken.safeTransfer(owner(), transferAmount);
+            purchaseToken.safeTransfer(
+                address(originationCore),
+                originationCoreFees
+            );
+        }
+
+        emit PurchaseTokenClaim(owner(), transferAmount);
     }
 
     //--------------------------------------------------------------------------
