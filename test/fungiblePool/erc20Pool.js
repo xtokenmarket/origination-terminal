@@ -177,46 +177,6 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
     expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter.add(amountIn));
   });
 
-  it(`should receive the purchased offer tokens right after purchasing 
-      when no reserve amount and no vesting period set`, async () => {
-    // you will receive 10x the amount you put in
-    const amountIn = ethers.utils.parseEther("1");
-    const expectedAmountOut = ethers.utils.parseUnits("10", 10);
-
-    // initiate sale
-    await originationPoolNoReserveNoVesting.initiateSale();
-    await advanceTime(1);
-
-    // offerToken = token out
-    // purchaseToken = token in
-    const offerBalanceBefore = await offerToken.balanceOf(user.address);
-    expect(offerBalanceBefore).to.equal(0);
-
-    const purchaseBalanceBefore = await purchaseToken.balanceOf(user.address);
-
-    await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
-
-    const purchaseBalanceAfter = await purchaseToken.balanceOf(user.address);
-    const offerBalanceAfter = await offerToken.balanceOf(user.address);
-
-    expect(await originationPoolNoReserveNoVesting.offerTokenAmountPurchased(user.address)).to.equal(0);
-    expect(offerBalanceAfter).to.equal(expectedAmountOut);
-    expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter.add(amountIn));
-  });
-
-  it("should fail to claim tokens when no reserve amount and no vesting period set", async () => {
-    const amountIn = ethers.utils.parseEther("1");
-
-    // initiate sale
-    await originationPoolNoReserveNoVesting.initiateSale();
-    await advanceTime(1);
-
-    await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
-    await advanceTime(86401);
-
-    await expect(originationPoolNoReserveNoVesting.claimTokens()).to.be.revertedWith("Tokens already claimed once purchased");
-  });
-
   it("shouldn't be able to purchase below the min contribution amount when purchase decimals are less than offer decimals", async () => {
     // disable whitelist
     await originationPoolDecimals.setWhitelist(ethers.utils.formatBytes32String("0"));
@@ -451,5 +411,62 @@ describe("Fungible Pool with ERC-20 Purchase token", async () => {
     const offerBalanceAfter = await offerToken.balanceOf(user.address);
 
     expect(offerBalanceAfter).to.equal(totalOfferingAmount);
+  });
+
+  describe("no reserve and no vesting period set", async () => {
+    it("should receive the purchased offer tokens right after purchasing", async () => {
+      // you will receive 10x the amount you put in
+      const amountIn = ethers.utils.parseEther("1");
+      const expectedAmountOut = ethers.utils.parseUnits("10", 10);
+
+      // initiate sale
+      await originationPoolNoReserveNoVesting.initiateSale();
+      // past whitelist sale period
+      await advanceTime(86401);
+
+      // offerToken = token out
+      // purchaseToken = token in
+      const offerBalanceBefore = await offerToken.balanceOf(user.address);
+      expect(offerBalanceBefore).to.equal(0);
+
+      const purchaseBalanceBefore = await purchaseToken.balanceOf(user.address);
+
+      await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
+
+      const purchaseBalanceAfter = await purchaseToken.balanceOf(user.address);
+      const offerBalanceAfter = await offerToken.balanceOf(user.address);
+
+      expect(await originationPoolNoReserveNoVesting.offerTokenAmountPurchased(user.address)).to.equal(0);
+      expect(offerBalanceAfter).to.equal(expectedAmountOut);
+      expect(purchaseBalanceBefore).to.equal(purchaseBalanceAfter.add(amountIn));
+    });
+
+    it("should fail claiming tokens using claimTokens function", async () => {
+      // disable whitelist
+      await originationPoolNoReserveNoVesting.setWhitelist(ethers.utils.formatBytes32String("0"));
+
+      const amountIn = ethers.utils.parseEther("1");
+
+      // initiate sale
+      await originationPoolNoReserveNoVesting.initiateSale();
+      // past whitelist sale period
+      await advanceTime(86401);
+
+      await originationPoolNoReserveNoVesting.connect(user).purchase(amountIn);
+      await advanceTime(86401);
+
+      await expect(originationPoolNoReserveNoVesting.claimTokens()).to.be.revertedWith("Tokens already claimed once purchased");
+    });
+
+    it("shouldn't be able to purchase above the contribution limit from a whitelisted address", async () => {
+      await originationPoolNoReserveNoVesting.initiateSale();
+
+      let contributionLimit = whitelist[user.address];
+
+      await originationPoolNoReserveNoVesting.connect(user).whitelistPurchase(userProof, contributionLimit, contributionLimit);
+      await expect(originationPoolNoReserveNoVesting.connect(user).whitelistPurchase(userProof, 1, contributionLimit)).to.be.revertedWith(
+        "User has reached their max contribution amount"
+      );
+    });
   });
 });

@@ -191,7 +191,8 @@ describe("Management functions", async () => {
     it("should be able claim purchase tokens during sale", async () => {
       // initiate sale
       await originationPoolNoReserveNoVesting.initiateSale();
-      await advanceTime(1);
+      // past whitelist sale period
+      await advanceTime(86401);
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -211,7 +212,8 @@ describe("Management functions", async () => {
     it("should be able claim purchase tokens after sale", async () => {
       // initiate sale
       await originationPoolNoReserveNoVesting.initiateSale();
-      await advanceTime(1);
+      // past whitelist sale period
+      await advanceTime(86401);
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -231,7 +233,8 @@ describe("Management functions", async () => {
     it("should return unsold offerTokens only after the sale has ended", async () => {
       // initiate sale
       await originationPoolNoReserveNoVesting.initiateSale();
-      await advanceTime(1);
+      // past whitelist sale period
+      await advanceTime(86401);
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -258,7 +261,8 @@ describe("Management functions", async () => {
     it("should correctly reset origination fees amount when claiming purchase tokens during sale", async () => {
       // initiate sale
       await originationPoolNoReserveNoVesting.initiateSale();
-      await advanceTime(1);
+      // past whitelist sale period
+      await advanceTime(86401);
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");
@@ -282,7 +286,8 @@ describe("Management functions", async () => {
     it("should be able claim ETH purchase tokens during sale", async () => {
       // initiate sale
       await originationPoolETHNoReserveNoVesting.initiateSale();
-      await advanceTime(1);
+      // past whitelist sale period
+      await advanceTime(86401);
 
       // you will receive 10x the amount you put in
       const amountIn = ethers.utils.parseEther("1");

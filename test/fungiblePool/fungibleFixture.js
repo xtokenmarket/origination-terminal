@@ -399,7 +399,7 @@ const createFixture = deployments.createFixture(async () => {
       whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
       whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
       publicSaleDuration: publicSaleDuration,
-      whitelistSaleDuration: 0,
+      whitelistSaleDuration: 86400, // duration of 24 hours
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: 0,
       vestingPeriod: 0,
@@ -467,7 +467,7 @@ const createFixture = deployments.createFixture(async () => {
       whitelistStartingPrice: whitelistOfferPricePerPurchaseToken,
       whitelistEndingPrice: whitelistOfferPricePerPurchaseToken,
       publicSaleDuration: 86400, // duration of 24 hours
-      whitelistSaleDuration: 0,
+      whitelistSaleDuration: 86400, // duration of 24 hours
       totalOfferingAmount: totalOfferingAmount,
       reserveAmount: 0,
       vestingPeriod: 0,
