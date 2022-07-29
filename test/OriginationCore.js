@@ -17,10 +17,16 @@ describe("OriginationCore", async () => {
   let offerToken;
 
   beforeEach(async () => {
-    ({ accounts, originationCore, originationPool, originationPoolUpgrade, 
-       nonFungibleOriginationPool, nonFungibleOriginationPoolUpgrade,
-       purchaseToken, offerToken } =
-      await createFixture());
+    ({
+      accounts,
+      originationCore,
+      originationPool,
+      originationPoolUpgrade,
+      nonFungibleOriginationPool,
+      nonFungibleOriginationPoolUpgrade,
+      purchaseToken,
+      offerToken,
+    } = await createFixture());
     [deployer, user, user1] = accounts;
   });
 
@@ -90,11 +96,7 @@ describe("OriginationCore", async () => {
     const feeAmountToken = await purchaseToken.balanceOf(originationCore.address);
     expect(feeAmountToken).to.not.equal(0);
 
-    await expect(await originationCore.claimFees("0x0000000000000000000000000000000000000000")).
-    to.changeEtherBalance(
-      deployer,
-      feeAmountEth
-    );
+    await expect(await originationCore.claimFees("0x0000000000000000000000000000000000000000")).to.changeEtherBalance(deployer, feeAmountEth);
 
     const revenuControllerBalanceBefore = await purchaseToken.balanceOf(deployer.address);
     await originationCore.claimFees(purchaseToken.address);
@@ -113,8 +115,9 @@ describe("OriginationCore", async () => {
     const feeAmountToken = await purchaseToken.balanceOf(originationCore.address);
     expect(feeAmountToken).to.not.equal(0);
 
-    await expect(originationCore.connect(user1).claimFees("0x0000000000000000000000000000000000000000")).
-      to.be.revertedWith('Only callable by revenue controller');
+    await expect(originationCore.connect(user1).claimFees("0x0000000000000000000000000000000000000000")).to.be.revertedWith(
+      "Only callable by revenue controller"
+    );
   });
 
   it("should successfully set the listing fee", async () => {
@@ -219,7 +222,7 @@ describe("OriginationCore", async () => {
     ).to.be.revertedWith("Invalid vesting terms");
   });
 
-  it("should fail to create a fungible listing sale duration greater than 4 weeks", async () => {
+  it("should fail to create a fungible listing sale duration greater than 365 days", async () => {
     const listingFee = await originationCore.listingFee();
     await expect(
       originationCore.createFungibleListing(
@@ -230,7 +233,7 @@ describe("OriginationCore", async () => {
           publicEndingPrice: 0, // ending price
           whitelistStartingPrice: 0,
           whitelistEndingPrice: 0,
-          publicSaleDuration: 3024000, // duration greater than 4 weeks
+          publicSaleDuration: 31536001, // duration greater than 365 days
           whitelistSaleDuration: 0, // duration of 24 hours
           totalOfferingAmount: 0,
           reserveAmount: 0,
@@ -242,7 +245,7 @@ describe("OriginationCore", async () => {
     ).to.be.revertedWith("Invalid sale duration");
   });
 
-  it("should fail to create a fungible listing sale duration greater than 4 weeks", async () => {
+  it("should fail to create a fungible listing sale duration greater than 365 days", async () => {
     const listingFee = await originationCore.listingFee();
     await expect(
       originationCore.createFungibleListing(
@@ -253,8 +256,8 @@ describe("OriginationCore", async () => {
           publicEndingPrice: 0, // ending price
           whitelistStartingPrice: 0,
           whitelistEndingPrice: 0,
-          publicSaleDuration: 200000, // 
-          whitelistSaleDuration: 3024000, // duration greater than 4 weeks
+          publicSaleDuration: 200000, //
+          whitelistSaleDuration: 31536001, // duration greater than 4 weeks
           totalOfferingAmount: 0,
           reserveAmount: 0,
           vestingPeriod: 0,
@@ -268,7 +271,7 @@ describe("OriginationCore", async () => {
   it("should fail to create a non fungible listing with incorrect listing fee", async () => {
     const listingFee = await originationCore.listingFee();
     // deploy nft
-    const listedNft = await deployArgs('MockNFTIntegration', originationCore.address, 'TestNFT', 'tNFT');
+    const listedNft = await deployArgs("MockNFTIntegration", originationCore.address, "TestNFT", "tNFT");
 
     await expect(
       originationCore.createNonFungibleListing(
@@ -293,7 +296,7 @@ describe("OriginationCore", async () => {
   it("should fail to create a non fungible listing with total whitelist mintable > total mintable", async () => {
     const listingFee = await originationCore.listingFee();
     // deploy nft
-    const listedNft = await deployArgs('MockNFTIntegration', originationCore.address, 'TestNFT', 'tNFT');
+    const listedNft = await deployArgs("MockNFTIntegration", originationCore.address, "TestNFT", "tNFT");
 
     let whitelistMintable = 500;
     let totalMintable = 300;
@@ -319,12 +322,19 @@ describe("OriginationCore", async () => {
   });
 
   it("shouldn't be able to initialize origination core with > 1e18 fee", async () => {
-    const originationCoreImpl = await deploy('OriginationCore');
+    const originationCoreImpl = await deploy("OriginationCore");
 
-    const originationCoreProxy = await deployArgs('OriginationCoreProxy', originationCoreImpl.address, user.address);
-    const originationCore = await ethers.getContractAt('OriginationCore', originationCoreProxy.address);
-    await expect(originationCore.initialize(1, bnDecimal(1).add(1), ethers.constants.AddressZero, 
-      ethers.constants.AddressZero, ethers.constants.AddressZero, ethers.constants.AddressZero)).
-      to.be.revertedWith('Invalid origination fee');
-  })
+    const originationCoreProxy = await deployArgs("OriginationCoreProxy", originationCoreImpl.address, user.address);
+    const originationCore = await ethers.getContractAt("OriginationCore", originationCoreProxy.address);
+    await expect(
+      originationCore.initialize(
+        1,
+        bnDecimal(1).add(1),
+        ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
+        ethers.constants.AddressZero
+      )
+    ).to.be.revertedWith("Invalid origination fee");
+  });
 });

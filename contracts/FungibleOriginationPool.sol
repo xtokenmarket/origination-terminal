@@ -16,8 +16,6 @@ import "./VestingEntryNFT.sol";
 /**
  * Origination pool representing a fungible token sale
  * Users buy an ERC-20 token using ETH or other ERC-20 token
- * If the set reserve amount is reached, token sale can be finalized and
- * Users can claim their offer tokens
  */
 contract FungibleOriginationPool is
     IFungibleOriginationPool,
@@ -31,7 +29,7 @@ contract FungibleOriginationPool is
     // Constants
     //--------------------------------------------------------------------------
 
-    uint256 constant MAX_SALE_DURATION = 4 weeks;
+    uint256 constant MAX_SALE_DURATION = 365 days;
 
     //--------------------------------------------------------------------------
     // State variables
@@ -471,15 +469,13 @@ contract FungibleOriginationPool is
     }
 
     function _claimPurchasedOfferTokens(address purchaser) internal {
-        require(
-            offerTokenAmountPurchased[purchaser] > 0,
-            "No purchase made"
-        );
+        uint256 purchasedAmount = offerTokenAmountPurchased[purchaser];
 
-        uint256 tokenAmount = offerTokenAmountPurchased[purchaser];
+        require(purchasedAmount > 0, "No purchase made");
+
         offerTokenAmountPurchased[purchaser] = 0;
-        offerToken.safeTransfer(purchaser, tokenAmount);
-        emit TokensClaimed(purchaser, tokenAmount);
+        offerToken.safeTransfer(purchaser, purchasedAmount);
+        emit TokensClaimed(purchaser, purchasedAmount);
     }
 
     function _returnPurchaseTokens(address purchaser, uint256 tokenAmount)
@@ -647,16 +643,12 @@ contract FungibleOriginationPool is
 
     /**
      * @dev Admin function to claim the purchase tokens from the sale
-     * @dev Can only claim at the conclusion of the sale
      * @dev Returns unsold offer tokens or all offer tokens if reserve amount was not met
      */
     function claimPurchaseToken() external onlyOwnerOrManager {
         if (vestingPeriod == 0 && reserveAmount == 0) {
             // purchase tokens can be claimed even if the sale has not ended
             _transferPurchaseTokenToOwner();
-
-            // reset accrued origination fees amount
-            originationCoreFees = 0;
 
             // return the unsold offerTokens
             // if the sale has ended
@@ -745,6 +737,8 @@ contract FungibleOriginationPool is
                 originationCoreFees
             );
         }
+        // reset accrued origination fees amount
+        originationCoreFees = 0;
 
         emit PurchaseTokenClaim(owner(), transferAmount);
     }
