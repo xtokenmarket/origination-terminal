@@ -216,6 +216,25 @@ contract OriginationCore is
     }
 
     /**
+     * @dev Withdraw unclaimed fees from origination pool
+     * @dev Callable only if there are any unclaimed fees
+     * @dev Callable only after owner claims sale purchase tokens
+     *
+     * @param _pool the pool address
+     * @param _feeToken The token address of the fee to claim
+     */
+    function withdrawFees(address _pool, address _feeToken) external {
+        require(
+            xTokenManager.isRevenueController(msg.sender),
+            "Only callable by revenue controller."
+        );
+
+        uint256 feeAmount = IFungibleOriginationPool(_pool).originationCoreFees();
+
+        IERC20(_feeToken).transferFrom(_pool, msg.sender, feeAmount);
+    }
+
+    /**
      * @dev Function used by origination pools to send the origination fees to this contract
      * @dev Only used after a token sale has finished successfully on claiming the tokens
      */

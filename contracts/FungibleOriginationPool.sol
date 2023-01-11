@@ -751,18 +751,31 @@ contract FungibleOriginationPool is
             require(success);
             // send fees to core
             originationCore.receiveFees{value: originationCoreFees}();
+            // reset accrued origination fees amount
+            originationCoreFees = 0;
         } else {
             transferAmount =
                 purchaseToken.balanceOf(address(this)) -
                 originationCoreFees;
             purchaseToken.safeTransfer(owner(), transferAmount);
-            purchaseToken.safeTransfer(
-                address(originationCore),
-                originationCoreFees
-            );
+            // handle timelocked tokens
+            try
+                purchaseToken.transfer(
+                    address(originationCore),
+                    originationCoreFees
+                )
+            {
+                // reset accrued origination fees amount
+                originationCoreFees = 0;
+            } catch {
+                // if transfer to core fails don't reset the fee amount
+                // approve tokens to origination core to be transferred
+                purchaseToken.safeIncreaseAllowance(
+                    address(originationCore),
+                    originationCoreFees
+                );
+            }
         }
-        // reset accrued origination fees amount
-        originationCoreFees = 0;
 
         emit PurchaseTokenClaim(owner(), transferAmount);
     }
