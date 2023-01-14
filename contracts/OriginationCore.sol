@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interface/IPoolDeployer.sol";
 import "./interface/INFTDeployer.sol";
@@ -21,6 +22,7 @@ contract OriginationCore is
     Initializable,
     OwnableUpgradeable
 {
+    using SafeERC20 for IERC20;
     //--------------------------------------------------------------------------
     // State variables
     //--------------------------------------------------------------------------
@@ -61,6 +63,8 @@ contract OriginationCore is
     event SetListingFee(uint256 fee);
     event CustomListingFeeEnabled(address indexed deployer, uint256 customFee);
     event CustomListingFeeDisabled(address indexed deployer);
+    event TokenFeeWithdraw(address indexed token, uint256 amount);
+    event EthFeeWithdraw(uint256 amount);
 
     //--------------------------------------------------------------------------
     // Constructor / Initializer
@@ -206,12 +210,14 @@ contract OriginationCore is
                 ""
             );
             require(success);
+            emit EthFeeWithdraw(address(this).balance);
         } else {
-            bool success = IERC20(_feeToken).transfer(
+            uint256 fees = IERC20(_feeToken).balanceOf(address(this));
+            IERC20(_feeToken).safeTransfer(
                 msg.sender,
-                IERC20(_feeToken).balanceOf(address(this))
+                fees
             );
-            require(success);
+            emit TokenFeeWithdraw(_feeToken, fees);
         }
     }
 
