@@ -113,10 +113,11 @@ contract OriginationCore is
      * @dev Must pay the listing fee
      *
      * @param saleParams The token sale params
+     * @return originationPool address of the deployed pool
      */
     function createFungibleListing(
         IFungibleOriginationPool.SaleParams calldata saleParams
-    ) external payable {
+    ) external payable returns (address originationPool) {
         uint256 feeOwed = customListingFeeEnabled[msg.sender]
             ? customListingFee[msg.sender]
             : listingFee;
@@ -131,7 +132,7 @@ contract OriginationCore is
         );
 
         // Deploy the pool
-        address originationPool = poolDeployer.deployFungibleOriginationPool(
+        originationPool = poolDeployer.deployFungibleOriginationPool(
             address(proxyAdmin)
         );
         // Deploy the vesting entry nft if there is a vesting period
