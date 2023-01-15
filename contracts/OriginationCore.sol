@@ -239,6 +239,7 @@ contract OriginationCore is
         uint256 feeAmount = IFungibleOriginationPool(_pool).originationCoreFees();
 
         IERC20(_feeToken).transferFrom(_pool, msg.sender, feeAmount);
+        emit TokenFeeWithdraw(_feeToken, feeAmount);
     }
 
     /**
