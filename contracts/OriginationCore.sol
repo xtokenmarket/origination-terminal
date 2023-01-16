@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interface/IPoolDeployer.sol";
 import "./interface/INFTDeployer.sol";
@@ -21,6 +22,7 @@ contract OriginationCore is
     Initializable,
     OwnableUpgradeable
 {
+    using SafeERC20 for IERC20;
     //--------------------------------------------------------------------------
     // State variables
     //--------------------------------------------------------------------------
@@ -61,6 +63,8 @@ contract OriginationCore is
     event SetListingFee(uint256 fee);
     event CustomListingFeeEnabled(address indexed deployer, uint256 customFee);
     event CustomListingFeeDisabled(address indexed deployer);
+    event TokenFeeWithdraw(address indexed token, uint256 amount);
+    event EthFeeWithdraw(uint256 amount);
 
     //--------------------------------------------------------------------------
     // Constructor / Initializer
@@ -109,10 +113,11 @@ contract OriginationCore is
      * @dev Must pay the listing fee
      *
      * @param saleParams The token sale params
+     * @return originationPool address of the deployed pool
      */
     function createFungibleListing(
         IFungibleOriginationPool.SaleParams calldata saleParams
-    ) external payable {
+    ) external payable returns (address originationPool) {
         uint256 feeOwed = customListingFeeEnabled[msg.sender]
             ? customListingFee[msg.sender]
             : listingFee;
@@ -127,7 +132,7 @@ contract OriginationCore is
         );
 
         // Deploy the pool
-        address originationPool = poolDeployer.deployFungibleOriginationPool(
+        originationPool = poolDeployer.deployFungibleOriginationPool(
             address(proxyAdmin)
         );
         // Deploy the vesting entry nft if there is a vesting period
@@ -206,13 +211,35 @@ contract OriginationCore is
                 ""
             );
             require(success);
+            emit EthFeeWithdraw(address(this).balance);
         } else {
-            bool success = IERC20(_feeToken).transfer(
+            uint256 fees = IERC20(_feeToken).balanceOf(address(this));
+            IERC20(_feeToken).safeTransfer(
                 msg.sender,
-                IERC20(_feeToken).balanceOf(address(this))
+                fees
             );
-            require(success);
+            emit TokenFeeWithdraw(_feeToken, fees);
         }
+    }
+
+    /**
+     * @dev Withdraw unclaimed fees from origination pool
+     * @dev Callable only if there are any unclaimed fees
+     * @dev Callable only after owner claims sale purchase tokens
+     *
+     * @param _pool the pool address
+     * @param _feeToken The token address of the fee to claim
+     */
+    function withdrawFees(address _pool, address _feeToken) external {
+        require(
+            xTokenManager.isRevenueController(msg.sender),
+            "Only callable by revenue controller."
+        );
+
+        uint256 feeAmount = IFungibleOriginationPool(_pool).originationCoreFees();
+
+        IERC20(_feeToken).transferFrom(_pool, msg.sender, feeAmount);
+        emit TokenFeeWithdraw(_feeToken, feeAmount);
     }
 
     /**

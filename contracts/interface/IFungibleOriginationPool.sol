@@ -32,4 +32,6 @@ interface IFungibleOriginationPool {
         address vestingEntryNFT,
         SaleParams calldata saleParams
     ) external;
+
+    function originationCoreFees() external view returns (uint256);
 }
